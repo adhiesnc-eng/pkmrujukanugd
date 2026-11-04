@@ -11,7 +11,7 @@
     @media print {
       body * { visibility: hidden; }
       #printArea, #printArea * { visibility: visible; }
-      #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
       .no-print { display: none !important; }
     }
   </style>
@@ -849,9 +849,13 @@
       window.open(`https://api.whatsapp.com/send?text=${textMessage}`, '_blank');
     }
 
+    // FUNGSI PRINT SLIP YANG SUDAH DIPERBAIKI (ASYNCHRONOUS DELAY UNTUK MERENDER DOM)
     function printSlip(idKey) {
       const record = referralRecords.find(r => r.idKey === idKey);
-      if (!record) return;
+      if (!record) {
+        alert('Data rujukan tidak ditemukan!');
+        return;
+      }
 
       const printContent = document.getElementById('printContent');
       const dateObj = new Date(record.datetime);
@@ -874,8 +878,11 @@
 
       const printArea = document.getElementById('printArea');
       printArea.classList.remove('hidden');
-      window.print();
-      printArea.classList.add('hidden');
+
+      setTimeout(() => {
+        window.print();
+        printArea.classList.add('hidden');
+      }, 300);
     }
 
     function exportToCSV() {
