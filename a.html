@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presensi Rujukan UGD Puskesmas (v1.4.3 - rujukan-a25d0)</title>
+  <title>Presensi Rujukan UGD Puskesmas (v1.4.4 - rujukan-a25d0)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
@@ -28,7 +28,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-xl font-bold leading-tight">Presensi & Talangan UGD</h1>
-            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.3</span>
+            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.4</span>
           </div>
           <p class="text-xs text-emerald-100">UPTD Puskesmas Sampanahan • Cloud Sync</p>
         </div>
@@ -243,7 +243,16 @@
             <button type="button" onclick="clearDateFilter()" title="Reset Tanggal" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-times-circle"></i></button>
           </div>
 
-          <input type="text" id="searchInput" autocomplete="off" oninput="renderTable()" placeholder="Cari Px / RS..." class="px-3 py-1.5 border rounded-xl text-xs w-full md:w-32">
+          <!-- Kolom Search + Tombol Search & Reset -->
+          <div class="flex items-center gap-1">
+            <input type="search" id="searchInput" name="ugd_history_search_query" autocomplete="new-password" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); applySearchFilter(); }" placeholder="Cari Px / RS..." class="px-3 py-1.5 border rounded-xl text-xs w-36 md:w-40 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            <button type="button" onclick="applySearchFilter()" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition flex items-center gap-1" title="Cari Data">
+              <i class="fa-solid fa-magnifying-glass"></i> Cari
+            </button>
+            <button type="button" id="btnResetSearch" onclick="clearSearchFilter()" class="hidden px-2.5 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-300 transition" title="Hapus Pencarian">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
           
           <select id="filterInsurance" autocomplete="off" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
             <option value="ALL">Semua Penjamin</option>
@@ -397,7 +406,7 @@
           <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
             <i class="fa-solid fa-circle-info"></i> Informasi Versi Aplikasi
           </h4>
-          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.3</b></p>
+          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.4</b></p>
           <p class="text-slate-600">Aplikasi Presensi Rujukan & Dana Talangan UGD UPTD Puskesmas Sampanahan.</p>
         </div>
         <button type="button" onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
@@ -449,7 +458,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const APP_VERSION = "v1.4.3";
+    const APP_VERSION = "v1.4.4";
 
     let masterStaff = JSON.parse(localStorage.getItem('ugd_master_staff') || JSON.stringify({
       Perawat: ['Agus, S.Kep', 'Rina, Amd.Kep', 'Hendra, Amd.Kep', 'Siti, S.Kep', 'Budi, Amd.Kep'],
@@ -465,6 +474,7 @@
     ]));
 
     let referralRecords = [];
+    let activeSearchQuery = '';
     let appSettingsPin = localStorage.getItem('ugd_settings_pin') || '1234';
 
     function openPinModal() {
@@ -718,6 +728,29 @@
       }
     }
 
+    function applySearchFilter() {
+      const searchEl = document.getElementById('searchInput');
+      const resetBtn = document.getElementById('btnResetSearch');
+      activeSearchQuery = searchEl ? String(searchEl.value || '').toLowerCase().trim() : '';
+      if (resetBtn) {
+        if (activeSearchQuery) {
+          resetBtn.classList.remove('hidden');
+        } else {
+          resetBtn.classList.add('hidden');
+        }
+      }
+      renderTable();
+    }
+
+    function clearSearchFilter() {
+      const searchEl = document.getElementById('searchInput');
+      const resetBtn = document.getElementById('btnResetSearch');
+      if (searchEl) searchEl.value = '';
+      activeSearchQuery = '';
+      if (resetBtn) resetBtn.classList.add('hidden');
+      renderTable();
+    }
+
     function clearDateFilter() {
       document.getElementById('startDate').value = '';
       document.getElementById('endDate').value = '';
@@ -742,13 +775,12 @@
       const tbody = document.getElementById('dataTable');
       if (!tbody) return;
 
-      const searchEl = document.getElementById('searchInput');
       const filterInsEl = document.getElementById('filterInsurance');
       const filterAdvEl = document.getElementById('filterAdvanceStatus');
       const startDateEl = document.getElementById('startDate');
       const endDateEl = document.getElementById('endDate');
 
-      const search = searchEl ? String(searchEl.value || '').toLowerCase().trim() : '';
+      const search = activeSearchQuery;
       const filterIns = filterInsEl ? (filterInsEl.value || 'ALL') : 'ALL';
       const filterAdv = filterAdvEl ? (filterAdvEl.value || 'ALL') : 'ALL';
       const startDateVal = startDateEl ? String(startDateEl.value || '').trim() : '';
@@ -1070,6 +1102,9 @@
     }
 
     window.onload = function() {
+      const searchEl = document.getElementById('searchInput');
+      if (searchEl) searchEl.value = '';
+      activeSearchQuery = '';
       initClock();
       renderStaffList();
       renderHospitalDropdown();
