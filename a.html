@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presensi Rujukan UGD Puskesmas (v1.4.4 - rujukan-a25d0)</title>
+  <title>Presensi Rujukan UGD Puskesmas (v1.4.5 - rujukan-a25d0)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
@@ -28,7 +28,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-xl font-bold leading-tight">Presensi & Talangan UGD</h1>
-            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.4</span>
+            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.5</span>
           </div>
           <p class="text-xs text-emerald-100">UPTD Puskesmas Sampanahan • Cloud Sync</p>
         </div>
@@ -294,6 +294,47 @@
   </main>
 
   <!-- ========================================== -->
+  <!-- MODAL POPUP: KONFIRMASI HAPUS DATA         -->
+  <!-- ========================================== -->
+  <div id="deleteModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" onclick="if(event.target === this) closeDeleteModal()">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5 text-center border border-slate-100">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-800">Hapus Catatan Rujukan?</h3>
+        <p class="text-xs text-slate-500 mt-1">Data yang dihapus akan hilang permanen dari Cloud Database dan tidak dapat dikembalikan.</p>
+      </div>
+
+      <div id="deleteRecordSummary" class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-left text-xs space-y-1.5">
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Pasien:</span>
+          <span id="delSummaryPatient" class="font-bold text-slate-800 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Tujuan RS:</span>
+          <span id="delSummaryHospital" class="font-semibold text-emerald-700 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Waktu:</span>
+          <span id="delSummaryDate" class="text-slate-700 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2 pt-1 border-t border-slate-200">
+          <span class="text-slate-500">Talangan:</span>
+          <span id="delSummaryAdvance" class="font-bold text-amber-700 text-right">Rp 0</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="closeDeleteModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+        <button type="button" id="btnConfirmDelete" onclick="confirmDeleteRecord()" class="w-full py-2.5 bg-rose-600 text-white rounded-xl text-xs font-semibold hover:bg-rose-700 shadow-md transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-trash"></i> Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- MODAL POPUP: PIN & SETTINGS                -->
   <!-- ========================================== -->
   <div id="pinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -406,7 +447,7 @@
           <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
             <i class="fa-solid fa-circle-info"></i> Informasi Versi Aplikasi
           </h4>
-          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.4</b></p>
+          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.5</b></p>
           <p class="text-slate-600">Aplikasi Presensi Rujukan & Dana Talangan UGD UPTD Puskesmas Sampanahan.</p>
         </div>
         <button type="button" onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
@@ -458,7 +499,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const APP_VERSION = "v1.4.4";
+    const APP_VERSION = "v1.4.5";
 
     let masterStaff = JSON.parse(localStorage.getItem('ugd_master_staff') || JSON.stringify({
       Perawat: ['Agus, S.Kep', 'Rina, Amd.Kep', 'Hendra, Amd.Kep', 'Siti, S.Kep', 'Budi, Amd.Kep'],
@@ -475,6 +516,7 @@
 
     let referralRecords = [];
     let activeSearchQuery = '';
+    let pendingDeleteIdKey = null;
     let appSettingsPin = localStorage.getItem('ugd_settings_pin') || '1234';
 
     function openPinModal() {
@@ -722,10 +764,46 @@
     function deleteRecord(event, idKey) {
       if (event) event.stopPropagation();
       const cleanId = String(idKey);
-      if (confirm('Hapus catatan presensi ini dari Cloud?')) {
-        db.ref('ugd_referrals/' + cleanId).remove()
-          .catch(err => alert('Gagal menghapus: ' + err.message));
-      }
+      const record = referralRecords.find(r => String(r.idKey) === cleanId);
+      pendingDeleteIdKey = cleanId;
+
+      const fuelVal = record ? (Number(record.fuelAmount) || 0) : 0;
+      const mealVal = record ? (Number(record.mealAmount) || 0) : 0;
+      const totalAdvVal = record ? (Number(record.advanceAmount) || (fuelVal + mealVal)) : 0;
+
+      document.getElementById('delSummaryPatient').innerText = (record && record.patientName) || '-';
+      document.getElementById('delSummaryHospital').innerText = (record && record.hospital) || '-';
+      document.getElementById('delSummaryDate').innerText = record ? formatSafeDate(record.datetime, true) : '-';
+      document.getElementById('delSummaryAdvance').innerText = totalAdvVal > 0 ? formatRupiah(totalAdvVal) : 'Tidak Ada';
+
+      const confirmBtn = document.getElementById('btnConfirmDelete');
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Ya, Hapus`;
+
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      pendingDeleteIdKey = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    function confirmDeleteRecord() {
+      if (!pendingDeleteIdKey) return;
+      const cleanId = String(pendingDeleteIdKey);
+      const confirmBtn = document.getElementById('btnConfirmDelete');
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...`;
+
+      db.ref('ugd_referrals/' + cleanId).remove()
+        .then(() => {
+          closeDeleteModal();
+        })
+        .catch(err => {
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Ya, Hapus`;
+          alert('Gagal menghapus: ' + err.message);
+        });
     }
 
     function applySearchFilter() {
@@ -1098,8 +1176,17 @@
       dlAnchor.setAttribute("download", `Backup_Rujukan_UGD_${new Date().toISOString().slice(0,10)}.json`);
       document.body.appendChild(dlAnchor);
       dlAnchor.click();
-      dlAnchor.remove();
+      document.body.removeChild(dlAnchor);
     }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const delModal = document.getElementById('deleteModal');
+        if (delModal && !delModal.classList.contains('hidden')) {
+          closeDeleteModal();
+        }
+      }
+    });
 
     window.onload = function() {
       const searchEl = document.getElementById('searchInput');
