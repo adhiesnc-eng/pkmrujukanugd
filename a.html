@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presensi Rujukan UGD Puskesmas (v1.4.2 - rujukan-a25d0)</title>
+  <title>Presensi Rujukan UGD Puskesmas (v1.4.3 - rujukan-a25d0)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
@@ -28,7 +28,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-xl font-bold leading-tight">Presensi & Talangan UGD</h1>
-            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.2</span>
+            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.3</span>
           </div>
           <p class="text-xs text-emerald-100">UPTD Puskesmas Sampanahan • Cloud Sync</p>
         </div>
@@ -237,21 +237,21 @@
         <!-- Filter Bar -->
         <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <div class="flex items-center gap-1 bg-slate-50 border p-1 rounded-xl text-xs">
-            <input type="date" id="startDate" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
+            <input type="date" id="startDate" autocomplete="off" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
             <span class="text-slate-400">s/d</span>
-            <input type="date" id="endDate" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
+            <input type="date" id="endDate" autocomplete="off" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
             <button type="button" onclick="clearDateFilter()" title="Reset Tanggal" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-times-circle"></i></button>
           </div>
 
-          <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari Px / RS..." class="px-3 py-1.5 border rounded-xl text-xs w-full md:w-32">
+          <input type="text" id="searchInput" autocomplete="off" oninput="renderTable()" placeholder="Cari Px / RS..." class="px-3 py-1.5 border rounded-xl text-xs w-full md:w-32">
           
-          <select id="filterInsurance" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
+          <select id="filterInsurance" autocomplete="off" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
             <option value="ALL">Semua Penjamin</option>
             <option value="BPJS">BPJS</option>
             <option value="Umum">Umum</option>
           </select>
 
-          <select id="filterAdvanceStatus" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
+          <select id="filterAdvanceStatus" autocomplete="off" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
             <option value="ALL">Status Talangan</option>
             <option value="Belum Diganti">Belum Diganti</option>
             <option value="Sudah Diganti">Sudah Diganti</option>
@@ -397,7 +397,7 @@
           <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
             <i class="fa-solid fa-circle-info"></i> Informasi Versi Aplikasi
           </h4>
-          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.2</b></p>
+          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.3</b></p>
           <p class="text-slate-600">Aplikasi Presensi Rujukan & Dana Talangan UGD UPTD Puskesmas Sampanahan.</p>
         </div>
         <button type="button" onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
@@ -449,7 +449,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const APP_VERSION = "v1.4.2";
+    const APP_VERSION = "v1.4.3";
 
     let masterStaff = JSON.parse(localStorage.getItem('ugd_master_staff') || JSON.stringify({
       Perawat: ['Agus, S.Kep', 'Rina, Amd.Kep', 'Hendra, Amd.Kep', 'Siti, S.Kep', 'Budi, Amd.Kep'],
@@ -740,32 +740,34 @@
 
     function renderTable() {
       const tbody = document.getElementById('dataTable');
-      const search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-      const filterIns = document.getElementById('filterInsurance').value;
-      const filterAdv = document.getElementById('filterAdvanceStatus').value;
+      if (!tbody) return;
 
-      const startDateVal = document.getElementById('startDate').value;
-      const endDateVal = document.getElementById('endDate').value;
+      const searchEl = document.getElementById('searchInput');
+      const filterInsEl = document.getElementById('filterInsurance');
+      const filterAdvEl = document.getElementById('filterAdvanceStatus');
+      const startDateEl = document.getElementById('startDate');
+      const endDateEl = document.getElementById('endDate');
 
-      tbody.innerHTML = '';
+      const search = searchEl ? String(searchEl.value || '').toLowerCase().trim() : '';
+      const filterIns = filterInsEl ? (filterInsEl.value || 'ALL') : 'ALL';
+      const filterAdv = filterAdvEl ? (filterAdvEl.value || 'ALL') : 'ALL';
+      const startDateVal = startDateEl ? String(startDateEl.value || '').trim() : '';
+      const endDateVal = endDateEl ? String(endDateEl.value || '').trim() : '';
 
-      let totalCount = 0;
-      let bpjsCount = 0;
-      let puskesmasVehCount = 0;
-      let totalAdvancePending = 0;
-      let totalAdvancePaid = 0;
+      const sourceList = Array.isArray(referralRecords) ? referralRecords : [];
 
-      const filtered = referralRecords.filter(r => {
+      const filtered = sourceList.filter(r => {
         if (!r || typeof r !== 'object') return false;
 
-        const px = (r.patientName || '').toLowerCase();
-        const rs = (r.hospital || '').toLowerCase();
-        const st = (r.staff || '').toLowerCase();
-        const dr = (r.driver || '').toLowerCase();
+        const px = String(r.patientName || '').toLowerCase();
+        const rs = String(r.hospital || '').toLowerCase();
+        const st = String(r.staff || '').toLowerCase();
+        const dr = String(r.driver || '').toLowerCase();
 
         const matchSearch = !search || px.includes(search) || rs.includes(search) || st.includes(search) || dr.includes(search);
-        const matchIns = filterIns === 'ALL' || r.insurance === filterIns;
-        const matchAdv = filterAdv === 'ALL' || (r.advanceStatus || 'Belum Diganti') === filterAdv;
+        const matchIns = filterIns === 'ALL' || String(r.insurance || '') === filterIns;
+        const statusVal = r.advanceStatus ? String(r.advanceStatus) : 'Belum Diganti';
+        const matchAdv = filterAdv === 'ALL' || statusVal === filterAdv;
 
         let matchDate = true;
         if (startDateVal || endDateVal) {
@@ -780,6 +782,12 @@
 
         return matchSearch && matchIns && matchAdv && matchDate;
       });
+
+      let totalCount = 0;
+      let bpjsCount = 0;
+      let puskesmasVehCount = 0;
+      let totalAdvancePending = 0;
+      let totalAdvancePaid = 0;
 
       filtered.forEach(r => {
         totalCount++;
@@ -809,7 +817,7 @@
         return;
       }
 
-      filtered.forEach(r => {
+      const rowsHtml = filtered.map(r => {
         const safeKey = String(r.idKey);
         const formattedDate = formatSafeDate(r.datetime, false);
         const fuelVal = Number(r.fuelAmount) || 0;
@@ -837,30 +845,31 @@
           `;
         }
 
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50 border-b';
-        tr.innerHTML = `
-          <td class="py-3 px-3 font-medium text-slate-700 whitespace-nowrap">${formattedDate}</td>
-          <td class="py-3 px-3 font-bold text-slate-900">${r.patientName || '-'}</td>
-          <td class="py-3 px-3">${insBadge}</td>
-          <td class="py-3 px-3 font-medium text-emerald-700">${r.hospital || '-'}</td>
-          <td class="py-3 px-3 font-semibold text-slate-700">${formatRupiah(r.claimAmount || 0)}</td>
-          <td class="py-3 px-3">
-            <div class="font-semibold text-slate-800"><i class="fa-solid fa-user-nurse mr-1 text-xs text-emerald-600"></i> ${r.staff || '-'}</div>
-            <div class="text-[11px] text-slate-500"><i class="fa-solid fa-id-card mr-1 text-xs"></i> Driver: ${r.driver || '-'}</div>
-          </td>
-          <td class="py-3 px-3">${advBadge}</td>
-          <td class="py-3 px-3 text-center">
-            ${hasAdvItem ? `<button type="button" onclick="toggleAdvanceStatus(event, '${safeKey}', '${currentAdvStatus}')" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold ${currentAdvStatus === 'Sudah Diganti' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'} transition"><i class="fa-solid fa-rotate mr-1"></i> ${currentAdvStatus}</button>` : '-'}
-          </td>
-          <td class="py-3 px-3 text-center whitespace-nowrap">
-            <button type="button" onclick="sendWhatsApp(event, '${safeKey}')" class="text-emerald-600 hover:text-emerald-800 mr-2 p-1.5 bg-emerald-50 rounded-lg" title="Kirim WA"><i class="fa-brands fa-whatsapp font-bold text-sm"></i></button>
-            <button type="button" onclick="printSlip(event, '${safeKey}')" class="text-blue-600 hover:text-blue-800 mr-2 p-1.5 bg-blue-50 rounded-lg" title="Cetak Resi"><i class="fa-solid fa-print"></i></button>
-            <button type="button" onclick="deleteRecord(event, '${safeKey}')" class="text-rose-600 hover:text-rose-800 p-1.5 bg-rose-50 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-          </td>
+        return `
+          <tr class="hover:bg-slate-50 border-b">
+            <td class="py-3 px-3 font-medium text-slate-700 whitespace-nowrap">${formattedDate}</td>
+            <td class="py-3 px-3 font-bold text-slate-900">${r.patientName || '-'}</td>
+            <td class="py-3 px-3">${insBadge}</td>
+            <td class="py-3 px-3 font-medium text-emerald-700">${r.hospital || '-'}</td>
+            <td class="py-3 px-3 font-semibold text-slate-700">${formatRupiah(r.claimAmount || 0)}</td>
+            <td class="py-3 px-3">
+              <div class="font-semibold text-slate-800"><i class="fa-solid fa-user-nurse mr-1 text-xs text-emerald-600"></i> ${r.staff || '-'}</div>
+              <div class="text-[11px] text-slate-500"><i class="fa-solid fa-id-card mr-1 text-xs"></i> Driver: ${r.driver || '-'}</div>
+            </td>
+            <td class="py-3 px-3">${advBadge}</td>
+            <td class="py-3 px-3 text-center">
+              ${hasAdvItem ? `<button type="button" onclick="toggleAdvanceStatus(event, '${safeKey}', '${currentAdvStatus}')" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold ${currentAdvStatus === 'Sudah Diganti' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'} transition"><i class="fa-solid fa-rotate mr-1"></i> ${currentAdvStatus}</button>` : '-'}
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <button type="button" onclick="sendWhatsApp(event, '${safeKey}')" class="text-emerald-600 hover:text-emerald-800 mr-2 p-1.5 bg-emerald-50 rounded-lg" title="Kirim WA"><i class="fa-brands fa-whatsapp font-bold text-sm"></i></button>
+              <button type="button" onclick="printSlip(event, '${safeKey}')" class="text-blue-600 hover:text-blue-800 mr-2 p-1.5 bg-blue-50 rounded-lg" title="Cetak Resi"><i class="fa-solid fa-print"></i></button>
+              <button type="button" onclick="deleteRecord(event, '${safeKey}')" class="text-rose-600 hover:text-rose-800 p-1.5 bg-rose-50 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
         `;
-        tbody.appendChild(tr);
-      });
+      }).join('');
+
+      tbody.innerHTML = rowsHtml;
     }
 
     function sendWhatsApp(event, idKey) {
@@ -1057,7 +1066,7 @@
       dlAnchor.setAttribute("download", `Backup_Rujukan_UGD_${new Date().toISOString().slice(0,10)}.json`);
       document.body.appendChild(dlAnchor);
       dlAnchor.click();
-      document.body.removeChild(dlAnchor);
+      dlAnchor.remove();
     }
 
     window.onload = function() {
