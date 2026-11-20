@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presensi Rujukan UGD Puskesmas (v1.4.1 - rujukan-a25d0)</title>
+  <title>Presensi Rujukan UGD Puskesmas (v1.4.2 - rujukan-a25d0)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
@@ -28,7 +28,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-xl font-bold leading-tight">Presensi & Talangan UGD</h1>
-            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.1</span>
+            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.2</span>
           </div>
           <p class="text-xs text-emerald-100">UPTD Puskesmas Sampanahan • Cloud Sync</p>
         </div>
@@ -37,7 +37,7 @@
         <div id="syncStatus" class="text-xs bg-emerald-800 px-2.5 py-1 rounded-full text-emerald-200">
           <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Menghubungkan...
         </div>
-        <button onclick="openPinModal()" class="bg-emerald-600 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-emerald-500 shadow-sm transition flex items-center gap-1.5">
+        <button type="button" onclick="openPinModal()" class="bg-emerald-600 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-emerald-500 shadow-sm transition flex items-center gap-1.5">
           <i class="fa-solid fa-lock text-[11px]"></i> Pengaturan
         </button>
       </div>
@@ -228,7 +228,7 @@
     </div>
 
     <!-- Controls & Data Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+    <div id="historySection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
           <i class="fa-solid fa-list text-emerald-600"></i> Riwayat & Dana Talangan Terperinci
@@ -240,7 +240,7 @@
             <input type="date" id="startDate" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
             <span class="text-slate-400">s/d</span>
             <input type="date" id="endDate" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
-            <button onclick="clearDateFilter()" title="Reset Tanggal" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-times-circle"></i></button>
+            <button type="button" onclick="clearDateFilter()" title="Reset Tanggal" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-times-circle"></i></button>
           </div>
 
           <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari Px / RS..." class="px-3 py-1.5 border rounded-xl text-xs w-full md:w-32">
@@ -257,7 +257,7 @@
             <option value="Sudah Diganti">Sudah Diganti</option>
           </select>
           
-          <button onclick="exportToCSV()" class="px-3.5 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold hover:bg-emerald-200 transition"><i class="fa-solid fa-file-excel mr-1"></i> Export</button>
+          <button type="button" onclick="exportToCSV()" class="px-3.5 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold hover:bg-emerald-200 transition"><i class="fa-solid fa-file-excel mr-1"></i> Export</button>
         </div>
       </div>
 
@@ -303,8 +303,8 @@
       </div>
 
       <div class="grid grid-cols-2 gap-2 pt-1">
-        <button onclick="closePinModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
-        <button onclick="verifyPinCode()" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 shadow-md transition">Masuk</button>
+        <button type="button" onclick="closePinModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+        <button type="button" onclick="verifyPinCode()" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 shadow-md transition">Masuk</button>
       </div>
       <p class="text-[10px] text-slate-400">Default PIN awal: <b class="font-mono text-slate-600">1234</b></p>
     </div>
@@ -316,15 +316,15 @@
         <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
           <i class="fa-solid fa-gear text-emerald-600"></i> Pengaturan Aplikasi
         </h3>
-        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
       <div class="flex space-x-2 border-b text-xs font-semibold overflow-x-auto pb-1">
-        <button onclick="switchSettingsTab('staff')" id="tabBtnStaff" class="pb-2 px-3 border-b-2 border-emerald-600 text-emerald-700 whitespace-nowrap">Master Nakes</button>
-        <button onclick="switchSettingsTab('hospital')" id="tabBtnHospital" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Master RS & Nominal</button>
-        <button onclick="switchSettingsTab('security')" id="tabBtnSecurity" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Keamanan PIN</button>
-        <button onclick="switchSettingsTab('firebase')" id="tabBtnFirebase" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Firebase</button>
-        <button onclick="switchSettingsTab('about')" id="tabBtnAbout" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Tentang</button>
+        <button type="button" onclick="switchSettingsTab('staff')" id="tabBtnStaff" class="pb-2 px-3 border-b-2 border-emerald-600 text-emerald-700 whitespace-nowrap">Master Nakes</button>
+        <button type="button" onclick="switchSettingsTab('hospital')" id="tabBtnHospital" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Master RS & Nominal</button>
+        <button type="button" onclick="switchSettingsTab('security')" id="tabBtnSecurity" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Keamanan PIN</button>
+        <button type="button" onclick="switchSettingsTab('firebase')" id="tabBtnFirebase" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Firebase</button>
+        <button type="button" onclick="switchSettingsTab('about')" id="tabBtnAbout" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Tentang</button>
       </div>
 
       <!-- Konten Tab 1: Master Nakes -->
@@ -335,7 +335,7 @@
             <span class="text-xs font-bold text-slate-700">Daftar Perawat</span>
             <div class="flex gap-1.5">
               <input type="text" id="newNurseInput" placeholder="Nama Perawat..." class="w-full px-3 py-2 border rounded-xl text-xs bg-white">
-              <button onclick="addStaffMember('Perawat')" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah</button>
+              <button type="button" onclick="addStaffMember('Perawat')" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah</button>
             </div>
             <div id="nurseListContainer" class="bg-white p-2.5 rounded-xl border max-h-36 overflow-y-auto space-y-1 text-xs"></div>
           </div>
@@ -343,7 +343,7 @@
             <span class="text-xs font-bold text-slate-700">Daftar Bidan</span>
             <div class="flex gap-1.5">
               <input type="text" id="newMidwifeInput" placeholder="Nama Bidan..." class="w-full px-3 py-2 border rounded-xl text-xs bg-white">
-              <button onclick="addStaffMember('Bidan')" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah</button>
+              <button type="button" onclick="addStaffMember('Bidan')" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah</button>
             </div>
             <div id="midwifeListContainer" class="bg-white p-2.5 rounded-xl border max-h-36 overflow-y-auto space-y-1 text-xs"></div>
           </div>
@@ -357,7 +357,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
             <input type="text" id="newHospitalName" placeholder="Nama RS (Cth: RSUD Kotabaru)" class="px-3 py-2 border rounded-xl text-xs bg-white">
             <input type="number" id="newHospitalClaim" placeholder="Nominal Klaim (Rp)" class="px-3 py-2 border rounded-xl text-xs bg-white">
-            <button onclick="addHospital()" class="bg-emerald-600 text-white py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah RS & Tarif</button>
+            <button type="button" onclick="addHospital()" class="bg-emerald-600 text-white py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah RS & Tarif</button>
           </div>
           <div id="hospitalListContainer" class="bg-white p-2.5 rounded-xl border max-h-52 overflow-y-auto space-y-1 text-xs"></div>
         </div>
@@ -375,7 +375,7 @@
               <label class="block font-semibold text-slate-700 mb-1">PIN Baru (Min. 4 Digit)</label>
               <input type="password" id="newPinInput" placeholder="Masukkan 4-6 digit PIN baru..." maxlength="6" class="w-full px-3 py-2.5 border rounded-xl bg-white text-sm font-mono">
             </div>
-            <button onclick="updateSettingsPin()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-semibold transition">Simpan PIN Baru</button>
+            <button type="button" onclick="updateSettingsPin()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-semibold transition">Simpan PIN Baru</button>
           </div>
         </div>
       </div>
@@ -397,14 +397,14 @@
           <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
             <i class="fa-solid fa-circle-info"></i> Informasi Versi Aplikasi
           </h4>
-          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.1</b></p>
+          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.2</b></p>
           <p class="text-slate-600">Aplikasi Presensi Rujukan & Dana Talangan UGD UPTD Puskesmas Sampanahan.</p>
         </div>
-        <button onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
+        <button type="button" onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
       </div>
 
       <div class="flex justify-end pt-3 border-t">
-        <button onclick="closeSettingsModal()" class="px-5 py-2.5 bg-slate-700 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition">Tutup</button>
+        <button type="button" onclick="closeSettingsModal()" class="px-5 py-2.5 bg-slate-700 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition">Tutup</button>
       </div>
     </div>
   </div>
@@ -449,7 +449,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const APP_VERSION = "v1.4.1";
+    const APP_VERSION = "v1.4.2";
 
     let masterStaff = JSON.parse(localStorage.getItem('ugd_master_staff') || JSON.stringify({
       Perawat: ['Agus, S.Kep', 'Rina, Amd.Kep', 'Hendra, Amd.Kep', 'Siti, S.Kep', 'Budi, Amd.Kep'],
@@ -510,13 +510,20 @@
 
       ref.on('value', (snapshot) => {
         const data = snapshot.val();
-        referralRecords = [];
-        if (data) {
+        const nextRecords = [];
+        if (data && typeof data === 'object') {
           Object.keys(data).forEach(key => {
-            referralRecords.push({ idKey: String(key), ...data[key] });
+            if (data[key] && typeof data[key] === 'object') {
+              nextRecords.push({
+                idKey: String(key),
+                ...data[key],
+                id: Number(data[key].id) || Number(key) || 0
+              });
+            }
           });
-          referralRecords.sort((a, b) => (b.id || 0) - (a.id || 0));
+          nextRecords.sort((a, b) => (b.id || 0) - (a.id || 0));
         }
+        referralRecords = nextRecords;
         statusEl.innerHTML = `<i class="fa-solid fa-cloud text-white mr-1"></i> Terhubung Cloud`;
         renderTable();
       }, (error) => {
@@ -566,7 +573,7 @@
         manualInput.value = '';
 
         const selectedOption = select.options[select.selectedIndex];
-        const defaultClaim = selectedOption.getAttribute('data-claim') || '0';
+        const defaultClaim = selectedOption ? (selectedOption.getAttribute('data-claim') || '0') : '0';
         claimInput.value = defaultClaim;
       }
     }
@@ -686,7 +693,8 @@
         });
     }
 
-    function toggleAdvanceStatus(idKey, currentStatus) {
+    function toggleAdvanceStatus(event, idKey, currentStatus) {
+      if (event) event.stopPropagation();
       const cleanId = String(idKey);
       const newStatus = currentStatus === 'Belum Diganti' ? 'Sudah Diganti' : 'Belum Diganti';
       db.ref('ugd_referrals/' + cleanId).update({ advanceStatus: newStatus })
@@ -701,7 +709,8 @@
       toggleAdvanceInput(true);
     }
 
-    function deleteRecord(idKey) {
+    function deleteRecord(event, idKey) {
+      if (event) event.stopPropagation();
       const cleanId = String(idKey);
       if (confirm('Hapus catatan presensi ini dari Cloud?')) {
         db.ref('ugd_referrals/' + cleanId).remove()
@@ -747,6 +756,8 @@
       let totalAdvancePaid = 0;
 
       const filtered = referralRecords.filter(r => {
+        if (!r || typeof r !== 'object') return false;
+
         const px = (r.patientName || '').toLowerCase();
         const rs = (r.hospital || '').toLowerCase();
         const st = (r.staff || '').toLowerCase();
@@ -754,7 +765,7 @@
 
         const matchSearch = !search || px.includes(search) || rs.includes(search) || st.includes(search) || dr.includes(search);
         const matchIns = filterIns === 'ALL' || r.insurance === filterIns;
-        const matchAdv = filterAdv === 'ALL' || r.advanceStatus === filterAdv;
+        const matchAdv = filterAdv === 'ALL' || (r.advanceStatus || 'Belum Diganti') === filterAdv;
 
         let matchDate = true;
         if (startDateVal || endDateVal) {
@@ -821,7 +832,7 @@
               <div>Total: ${formatRupiah(totalAdvVal)}</div>
               <div class="text-[9px] text-slate-600 font-normal">Minyak: ${formatRupiah(fuelVal)}</div>
               <div class="text-[9px] text-slate-600 font-normal">Makan: ${formatRupiah(mealVal)}</div>
-              <div class="cursor-pointer underline text-indigo-700 pt-0.5" onclick="toggleAdvanceStatus('${safeKey}', '${currentAdvStatus}')">${statusText}</div>
+              <button type="button" class="cursor-pointer underline text-indigo-700 pt-0.5 text-left block" onclick="toggleAdvanceStatus(event, '${safeKey}', '${currentAdvStatus}')">${statusText}</button>
             </div>
           `;
         }
@@ -840,19 +851,20 @@
           </td>
           <td class="py-3 px-3">${advBadge}</td>
           <td class="py-3 px-3 text-center">
-            ${hasAdvItem ? `<button onclick="toggleAdvanceStatus('${safeKey}', '${currentAdvStatus}')" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold ${currentAdvStatus === 'Sudah Diganti' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'} transition"><i class="fa-solid fa-rotate mr-1"></i> ${currentAdvStatus}</button>` : '-'}
+            ${hasAdvItem ? `<button type="button" onclick="toggleAdvanceStatus(event, '${safeKey}', '${currentAdvStatus}')" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold ${currentAdvStatus === 'Sudah Diganti' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'} transition"><i class="fa-solid fa-rotate mr-1"></i> ${currentAdvStatus}</button>` : '-'}
           </td>
           <td class="py-3 px-3 text-center whitespace-nowrap">
-            <button onclick="sendWhatsApp('${safeKey}')" class="text-emerald-600 hover:text-emerald-800 mr-2 p-1.5 bg-emerald-50 rounded-lg" title="Kirim WA"><i class="fa-brands fa-whatsapp font-bold text-sm"></i></button>
-            <button onclick="printSlip('${safeKey}')" class="text-blue-600 hover:text-blue-800 mr-2 p-1.5 bg-blue-50 rounded-lg" title="Cetak Resi"><i class="fa-solid fa-print"></i></button>
-            <button onclick="deleteRecord('${safeKey}')" class="text-rose-600 hover:text-rose-800 p-1.5 bg-rose-50 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            <button type="button" onclick="sendWhatsApp(event, '${safeKey}')" class="text-emerald-600 hover:text-emerald-800 mr-2 p-1.5 bg-emerald-50 rounded-lg" title="Kirim WA"><i class="fa-brands fa-whatsapp font-bold text-sm"></i></button>
+            <button type="button" onclick="printSlip(event, '${safeKey}')" class="text-blue-600 hover:text-blue-800 mr-2 p-1.5 bg-blue-50 rounded-lg" title="Cetak Resi"><i class="fa-solid fa-print"></i></button>
+            <button type="button" onclick="deleteRecord(event, '${safeKey}')" class="text-rose-600 hover:text-rose-800 p-1.5 bg-rose-50 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function sendWhatsApp(idKey) {
+    function sendWhatsApp(event, idKey) {
+      if (event) event.stopPropagation();
       const record = referralRecords.find(r => String(r.idKey) === String(idKey));
       if (!record) return;
 
@@ -879,7 +891,8 @@
       window.open(`https://api.whatsapp.com/send?text=${textMessage}`, '_blank');
     }
 
-    function printSlip(idKey) {
+    function printSlip(event, idKey) {
+      if (event) event.stopPropagation();
       const record = referralRecords.find(r => String(r.idKey) === String(idKey));
       if (!record) {
         alert('Data rujukan tidak ditemukan!');
@@ -973,11 +986,11 @@
       midwifeCont.innerHTML = '';
 
       masterStaff.Perawat.forEach((name, idx) => {
-        nurseCont.innerHTML += `<div class="flex justify-between items-center bg-white p-1.5 rounded-lg border-b"><span>${name}</span> <button onclick="removeStaffMember('Perawat', ${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
+        nurseCont.innerHTML += `<div class="flex justify-between items-center bg-white p-1.5 rounded-lg border-b"><span>${name}</span> <button type="button" onclick="removeStaffMember('Perawat', ${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
       });
 
       masterStaff.Bidan.forEach((name, idx) => {
-        midwifeCont.innerHTML += `<div class="flex justify-between items-center bg-white p-1.5 rounded-lg border-b"><span>${name}</span> <button onclick="removeStaffMember('Bidan', ${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
+        midwifeCont.innerHTML += `<div class="flex justify-between items-center bg-white p-1.5 rounded-lg border-b"><span>${name}</span> <button type="button" onclick="removeStaffMember('Bidan', ${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
       });
     }
 
@@ -985,7 +998,7 @@
       const hospCont = document.getElementById('hospitalListContainer');
       hospCont.innerHTML = '';
       masterHospitals.forEach((h, idx) => {
-        hospCont.innerHTML += `<div class="flex justify-between items-center bg-white p-2 rounded-xl border-b"><span><b>${h.name}</b> (Klaim: Rp ${Number(h.claim).toLocaleString('id-ID')})</span> <button onclick="removeHospital(${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
+        hospCont.innerHTML += `<div class="flex justify-between items-center bg-white p-2 rounded-xl border-b"><span><b>${h.name}</b> (Klaim: Rp ${Number(h.claim).toLocaleString('id-ID')})</span> <button type="button" onclick="removeHospital(${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
       });
     }
 
@@ -1044,7 +1057,7 @@
       dlAnchor.setAttribute("download", `Backup_Rujukan_UGD_${new Date().toISOString().slice(0,10)}.json`);
       document.body.appendChild(dlAnchor);
       dlAnchor.click();
-      dlAnchor.remove();
+      document.body.removeChild(dlAnchor);
     }
 
     window.onload = function() {
