@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presensi Rujukan UGD Puskesmas (v1.4.8 - rujukan-a25d0)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-emerald-700 text-white shadow-md no-print">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white text-emerald-700 p-2 rounded-lg font-bold text-xl shadow-sm">
+          <i class="fa-solid fa-hospital-user"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-xl font-bold leading-tight">Presensi & Talangan UGD</h1>
+            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.4.8</span>
+          </div>
+          <p class="text-xs text-emerald-100">UPTD Puskesmas Sampanahan • Cloud Sync</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <div id="syncStatus" class="text-xs bg-emerald-800 px-2.5 py-1 rounded-full text-emerald-200">
+          <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Menghubungkan...
+        </div>
+        <button type="button" onclick="openPinModal()" class="bg-emerald-600 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-emerald-500 shadow-sm transition flex items-center gap-1.5">
+          <i class="fa-solid fa-lock text-[11px]"></i> Pengaturan
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6 no-print">
+
+    <!-- Form Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-3 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-emerald-600"></i> Form Catatan Rujukan & Rincian Talangan
+      </h2>
+
+      <form id="referralForm" onsubmit="saveDataToFirebase(event)" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Tanggal & Waktu -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal & Waktu</label>
+            <input type="datetime-local" id="datetime" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+
+          <!-- Nama Pasien -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Pasien (Px)</label>
+            <input type="text" id="patientName" placeholder="Contoh: Tn. Ahmad" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+
+          <!-- Rujukan Ke (Dropdown Master RS + Autofill Nominal) -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Rujukan Ke (RS Tujuan)</label>
+            <select id="hospitalSelect" onchange="onHospitalChange()" class="w-full px-3 py-2 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none mb-2">
+              <!-- Rendered Dynamically -->
+            </select>
+            <input type="text" id="hospitalManual" placeholder="Ketik nama RS rujukan..." class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none hidden">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Penjamin / Jenis Pasien -->
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <label class="block text-xs font-semibold text-slate-700 mb-2">Jenis Penjamin / Klaim:</label>
+            <div class="flex items-center space-x-6">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="insurance" value="BPJS" checked class="form-radio text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                <span class="ml-2 text-sm font-semibold text-emerald-700">BPJS Kesehatan</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="insurance" value="Umum" class="form-radio text-slate-600 focus:ring-emerald-500 h-4 w-4">
+                <span class="ml-2 text-sm font-semibold text-emerald-700">Umum / Mandiri</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Opsi Transportasi / Mobil -->
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <label class="block text-xs font-semibold text-slate-700 mb-2">Transportasi / Mobil:</label>
+            <div class="flex flex-wrap gap-4 text-xs font-medium">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="vehicle" value="Ambulan Puskesmas" checked class="form-radio text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                <span class="ml-1 text-slate-700">Ambulan Puskesmas</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="vehicle" value="Ambulan Desa" class="form-radio text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                <span class="ml-1 text-slate-700">Ambulan Desa</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="vehicle" value="Mobil Pribadi" class="form-radio text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                <span class="ml-1 text-slate-700">Mobil Pribadi</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Menu Rinci Dana Talangan & Rencana Nominal Klaim RS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rencana Nominal Klaim RS -->
+          <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 space-y-2">
+            <label class="block text-xs font-bold text-emerald-900 uppercase"><i class="fa-solid fa-file-invoice-dollar mr-1"></i> Rencana Nominal Klaim ke RS (Rp)</label>
+            <input type="number" id="claimAmount" placeholder="Cth: 750000 (Otomatis / Manual)" class="w-full px-3 py-2 border border-emerald-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            <p class="text-[10px] text-emerald-700">Terisi otomatis dari pengaturan RS, atau dapat diubah manual.</p>
+          </div>
+
+          <!-- Dana Talangan -->
+          <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 space-y-3">
+            <div class="flex justify-between items-center border-b border-amber-200 pb-2">
+              <span class="text-xs font-bold text-amber-900 uppercase"><i class="fa-solid fa-coins mr-1"></i> Talangan Operasional</span>
+              <div class="flex items-center space-x-3 text-xs">
+                <label class="inline-flex items-center cursor-pointer">
+                  <input type="radio" name="hasAdvance" value="Ya" checked onchange="toggleAdvanceInput(true)" class="text-amber-600">
+                  <span class="ml-1 font-semibold">Pakai</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                  <input type="radio" name="hasAdvance" value="Tidak" onchange="toggleAdvanceInput(false)" class="text-amber-600">
+                  <span class="ml-1">Tidak</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="advanceFieldsGrid" class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-semibold text-amber-800 mb-0.5">BBM / Minyak (Rp)</label>
+                <input type="number" id="fuelAmount" placeholder="Cth: 150000" class="w-full px-2.5 py-1.5 border border-amber-300 rounded-xl text-xs bg-white">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-amber-800 mb-0.5">Uang Makan (Rp)</label>
+                <input type="number" id="mealAmount" placeholder="Cth: 100000" class="w-full px-2.5 py-1.5 border border-amber-300 rounded-xl text-xs bg-white">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Kategori & Checklist Pendamping -->
+          <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+            <label class="block text-xs font-semibold text-slate-700">Petugas Pendamping (Nakes)</label>
+            
+            <div class="flex items-center space-x-4">
+              <label class="inline-flex items-center cursor-pointer text-xs font-medium">
+                <input type="radio" name="staffRole" value="Perawat" checked onchange="onRoleModeChanged()" class="text-emerald-600">
+                <span class="ml-1">Perawat</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer text-xs font-medium">
+                <input type="radio" name="staffRole" value="Bidan" onchange="onRoleModeChanged()" class="text-emerald-600">
+                <span class="ml-1">Bidan</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer text-xs font-medium">
+                <input type="radio" name="staffRole" value="Lainnya" onchange="onRoleModeChanged()" class="text-emerald-600">
+                <span class="ml-1">Lainnya</span>
+              </label>
+            </div>
+
+            <!-- List Checkbox Nama -->
+            <div id="staffChecklist" class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-slate-200 max-h-36 overflow-y-auto text-xs">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Custom / Input Nama Manual -->
+            <div id="manualStaffContainer" class="hidden">
+              <input type="text" id="manualStaff" placeholder="Ketik nama pendamping lainnya..." class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+
+            <!-- Menu Adaptif Peran: Perawat vs Bidan -->
+            <div id="roleAdaptiveBox" class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 space-y-2">
+              <div id="roleAdaptiveTitle" class="text-[11px] font-bold text-emerald-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-stethoscope"></i> Kesiapan Rujukan Perawat (UGD)
+              </div>
+              <div id="roleChecklistItems" class="space-y-1.5 text-[11px] text-slate-700">
+                <!-- Rendered dynamically by role -->
+              </div>
+              <input type="text" id="roleClinicalNote" placeholder="Catatan singkat kondisi/tindakan..." class="w-full px-2.5 py-1.5 border border-emerald-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Driver Ambulans & Catatan -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Driver / Pengemudi</label>
+              <input type="text" id="driverName" placeholder="Contoh: Bpk. Junaidi" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Klaim / Keterangan (Opsional)</label>
+              <input type="text" id="notes" placeholder="Contoh: Berkas klaim non-kapitasi lengkap" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2">
+          <button type="button" onclick="resetForm()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-300 transition">Reset</button>
+          <button type="submit" id="btnSubmit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Cloud</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Ringkasan Statistik & Keuangan -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] font-semibold text-slate-500 uppercase">Total Rujukan</p>
+        <p id="statTotal" class="text-xl font-bold text-slate-800">0</p>
+      </div>
+      <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] font-semibold text-emerald-600 uppercase">Rujukan BPJS</p>
+        <p id="statBpjs" class="text-xl font-bold text-emerald-700">0</p>
+      </div>
+      <div class="bg-white p-3.5 rounded-2xl border border-amber-300 bg-amber-50/50 shadow-sm">
+        <p class="text-[11px] font-semibold text-amber-700 uppercase">Talangan Belum Diganti</p>
+        <p id="statAdvancePending" class="text-base font-bold text-amber-800">Rp 0</p>
+      </div>
+      <div class="bg-white p-3.5 rounded-2xl border border-emerald-300 bg-emerald-50/50 shadow-sm">
+        <p class="text-[11px] font-semibold text-emerald-700 uppercase">Talangan Sudah Cair</p>
+        <p id="statAdvancePaid" class="text-base font-bold text-emerald-800">Rp 0</p>
+      </div>
+      <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] font-semibold text-blue-600 uppercase">Ambulan Pusk.</p>
+        <p id="statPuskesmas" class="text-xl font-bold text-blue-700">0</p>
+      </div>
+    </div>
+
+    <!-- Controls & Data Table -->
+    <div id="historySection" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-list text-emerald-600"></i> Riwayat & Dana Talangan Terperinci
+          </h2>
+          <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+            <button type="button" id="viewTabTable" onclick="switchHistoryView('table')" class="px-3 py-1 rounded-lg bg-white text-emerald-700 shadow-sm transition">
+              <i class="fa-solid fa-table-list mr-1"></i> Tabel Riwayat
+            </button>
+            <button type="button" id="viewTabRecap" onclick="switchHistoryView('recap')" class="px-3 py-1 rounded-lg text-slate-600 hover:text-slate-800 transition">
+              <i class="fa-solid fa-users-gear mr-1"></i> Rekap per Petugas & Driver
+            </button>
+          </div>
+        </div>
+        
+        <!-- Filter Bar -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div class="flex items-center gap-1 bg-slate-50 border p-1 rounded-xl text-xs">
+            <input type="date" id="startDate" autocomplete="off" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
+            <span class="text-slate-400">s/d</span>
+            <input type="date" id="endDate" autocomplete="off" onchange="renderTable()" class="px-1.5 py-1 bg-transparent border-none text-xs focus:outline-none">
+            <button type="button" onclick="clearDateFilter()" title="Reset Tanggal" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-times-circle"></i></button>
+          </div>
+
+          <!-- Kolom Search + Tombol Search & Reset -->
+          <div class="flex items-center gap-1">
+            <input type="search" id="searchInput" name="ugd_history_search_query" autocomplete="new-password" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); applySearchFilter(); }" placeholder="Cari Px / RS / Nama..." class="px-3 py-1.5 border rounded-xl text-xs w-36 md:w-40 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            <button type="button" onclick="applySearchFilter()" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition flex items-center gap-1" title="Cari Data">
+              <i class="fa-solid fa-magnifying-glass"></i> Cari
+            </button>
+            <button type="button" id="btnResetSearch" onclick="clearSearchFilter()" class="hidden px-2.5 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-300 transition" title="Hapus Pencarian">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <select id="filterRole" autocomplete="off" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white font-semibold text-slate-700">
+            <option value="ALL">Semua Peran</option>
+            <option value="Perawat">Perawat</option>
+            <option value="Bidan">Bidan</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+          
+          <select id="filterInsurance" autocomplete="off" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
+            <option value="ALL">Semua Penjamin</option>
+            <option value="BPJS">BPJS</option>
+            <option value="Umum">Umum</option>
+          </select>
+
+          <select id="filterAdvanceStatus" autocomplete="off" onchange="renderTable()" class="px-2.5 py-1.5 border rounded-xl text-xs bg-white">
+            <option value="ALL">Status Talangan</option>
+            <option value="Belum Diganti">Belum Diganti</option>
+            <option value="Sudah Diganti">Sudah Diganti</option>
+          </select>
+          
+          <button type="button" onclick="exportToCSV()" class="px-3.5 py-1.5 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold hover:bg-emerald-200 transition"><i class="fa-solid fa-file-excel mr-1"></i> Export</button>
+        </div>
+      </div>
+
+      <!-- Panel Tabel Riwayat -->
+      <div id="panelTableView" class="overflow-x-auto">
+        <table class="w-full text-xs text-left text-slate-600">
+          <thead class="bg-slate-100 text-slate-700 uppercase text-[11px] font-bold">
+            <tr>
+              <th class="py-3 px-3">Waktu</th>
+              <th class="py-3 px-3">Pasien</th>
+              <th class="py-3 px-3">Penjamin</th>
+              <th class="py-3 px-3">Tujuan Rujukan</th>
+              <th class="py-3 px-3">Nominal Klaim RS</th>
+              <th class="py-3 px-3">Pendamping & Driver</th>
+              <th class="py-3 px-3">Talangan (BBM & Makan)</th>
+              <th class="py-3 px-3 text-center">Status Cair</th>
+              <th class="py-3 px-3 text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="dataTable" class="divide-y divide-slate-200">
+            <!-- Data rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Panel Rekap Pencairan per Petugas & Driver -->
+      <div id="panelRecapView" class="hidden space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="font-semibold text-slate-700">Kelompokkan:</span>
+            <select id="recapRoleFilter" onchange="renderRecapPerPerson()" class="px-2.5 py-1.5 border rounded-xl bg-white text-xs font-semibold">
+              <option value="ALL">Semua (Perawat, Bidan & Driver)</option>
+              <option value="Perawat">Perawat</option>
+              <option value="Bidan">Bidan</option>
+              <option value="Lainnya">Pendamping Lainnya</option>
+              <option value="Driver">Driver / Pengemudi</option>
+            </select>
+            <span id="recapPeriodLabel" class="text-[11px] text-slate-500 ml-1">Periode: Semua Data</span>
+          </div>
+          <button type="button" onclick="printRecapPerPerson()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Cetak Rekap Pencairan
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left text-slate-600">
+            <thead class="bg-slate-100 text-slate-700 uppercase text-[11px] font-bold">
+              <tr>
+                <th class="py-3 px-3">Nama Petugas / Driver</th>
+                <th class="py-3 px-3">Peran</th>
+                <th class="py-3 px-3 text-center">Jumlah Trip</th>
+                <th class="py-3 px-3">Total BBM</th>
+                <th class="py-3 px-3">Total Makan</th>
+                <th class="py-3 px-3">Belum Diganti</th>
+                <th class="py-3 px-3">Sudah Diganti</th>
+                <th class="py-3 px-3 text-center">Aksi Pencairan</th>
+              </tr>
+            </thead>
+            <tbody id="recapPersonTable" class="divide-y divide-slate-200">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL POPUP: EDIT / KOREKSI DATA RUJUKAN    -->
+  <!-- ========================================== -->
+  <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" onclick="if(event.target === this) closeEditModal()">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto p-6 space-y-5 border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center text-base">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800 leading-tight">Edit / Koreksi Data Rujukan</h3>
+            <p class="text-[11px] text-slate-500">Perbarui detail rujukan, pendamping, atau rincian dana talangan di Cloud</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 text-lg w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="editReferralForm" onsubmit="updateDataInFirebase(event)" class="space-y-4">
+        <input type="hidden" id="editRecordIdKey">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal & Waktu</label>
+            <input type="datetime-local" id="editDatetime" required class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Pasien (Px)</label>
+            <input type="text" id="editPatientName" required class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Rujukan Ke (RS Tujuan)</label>
+            <select id="editHospitalSelect" onchange="onEditHospitalChange()" class="w-full px-3 py-2 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none mb-1.5">
+              <!-- Rendered dynamically -->
+            </select>
+            <input type="text" id="editHospitalManual" placeholder="Ketik nama RS rujukan..." class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none hidden">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Jenis Penjamin / Klaim:</label>
+            <div class="flex items-center space-x-5 text-xs">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="editInsurance" value="BPJS" class="text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                <span class="ml-1.5 font-semibold text-emerald-700">BPJS Kesehatan</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="editInsurance" value="Umum" class="text-slate-600 focus:ring-slate-500 h-4 w-4">
+                <span class="ml-1.5 font-semibold text-slate-700">Umum / Mandiri</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Transportasi / Mobil:</label>
+            <div class="flex flex-wrap gap-3 text-xs font-medium">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="editVehicle" value="Ambulan Puskesmas" class="text-emerald-600">
+                <span class="ml-1 text-slate-700">Ambulan Puskesmas</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="editVehicle" value="Ambulan Desa" class="text-emerald-600">
+                <span class="ml-1 text-slate-700">Ambulan Desa</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="editVehicle" value="Mobil Pribadi" class="text-emerald-600">
+                <span class="ml-1 text-slate-700">Mobil Pribadi</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div class="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 space-y-1.5">
+            <label class="block text-xs font-bold text-emerald-900 uppercase">Rencana Nominal Klaim ke RS (Rp)</label>
+            <input type="number" id="editClaimAmount" class="w-full px-3 py-2 border border-emerald-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+
+          <div class="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 space-y-2.5">
+            <div class="flex justify-between items-center border-b border-amber-200 pb-1.5">
+              <span class="text-xs font-bold text-amber-900 uppercase">Talangan Operasional</span>
+              <div class="flex items-center space-x-3 text-xs">
+                <label class="inline-flex items-center cursor-pointer">
+                  <input type="radio" name="editHasAdvance" value="Ya" onchange="toggleEditAdvanceInput(true)" class="text-amber-600">
+                  <span class="ml-1 font-semibold">Pakai</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                  <input type="radio" name="editHasAdvance" value="Tidak" onchange="toggleEditAdvanceInput(false)" class="text-amber-600">
+                  <span class="ml-1">Tidak</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="editAdvanceFieldsGrid" class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-semibold text-amber-800 mb-0.5">BBM / Minyak (Rp)</label>
+                <input type="number" id="editFuelAmount" class="w-full px-2.5 py-1.5 border border-amber-300 rounded-xl text-xs bg-white">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-amber-800 mb-0.5">Uang Makan (Rp)</label>
+                <input type="number" id="editMealAmount" class="w-full px-2.5 py-1.5 border border-amber-300 rounded-xl text-xs bg-white">
+              </div>
+            </div>
+
+            <div id="editAdvanceStatusWrapper" class="pt-1">
+              <label class="block text-[10px] font-semibold text-amber-900 mb-0.5">Status Pencairan Talangan</label>
+              <select id="editAdvanceStatus" class="w-full px-2.5 py-1.5 border border-amber-300 rounded-xl text-xs bg-white font-semibold">
+                <option value="Belum Diganti">Belum Diganti</option>
+                <option value="Sudah Diganti">Sudah Diganti</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
+            <label class="block text-xs font-semibold text-slate-700">Petugas Pendamping (Nakes)</label>
+            <div class="flex items-center space-x-4 text-xs">
+              <label class="inline-flex items-center cursor-pointer font-medium">
+                <input type="radio" name="editStaffRole" value="Perawat" onchange="onEditRoleModeChanged()" class="text-emerald-600">
+                <span class="ml-1">Perawat</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer font-medium">
+                <input type="radio" name="editStaffRole" value="Bidan" onchange="onEditRoleModeChanged()" class="text-emerald-600">
+                <span class="ml-1">Bidan</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer font-medium">
+                <input type="radio" name="editStaffRole" value="Lainnya" onchange="onEditRoleModeChanged()" class="text-emerald-600">
+                <span class="ml-1">Lainnya</span>
+              </label>
+            </div>
+
+            <div id="editStaffChecklist" class="grid grid-cols-2 gap-1.5 bg-white p-2.5 rounded-xl border border-slate-200 max-h-32 overflow-y-auto text-xs"></div>
+
+            <div id="editManualStaffContainer" class="hidden">
+              <input type="text" id="editManualStaff" placeholder="Ketik nama pendamping lainnya..." class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+
+            <div id="editRoleAdaptiveBox" class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5 space-y-1.5">
+              <div id="editRoleAdaptiveTitle" class="text-[11px] font-bold text-emerald-900">Kesiapan Rujukan</div>
+              <div id="editRoleChecklistItems" class="space-y-1 text-[11px] text-slate-700"></div>
+              <input type="text" id="editRoleClinicalNote" placeholder="Catatan singkat kondisi/tindakan..." class="w-full px-2.5 py-1.5 border border-emerald-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Driver / Pengemudi</label>
+              <input type="text" id="editDriverName" required class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Klaim / Keterangan (Opsional)</label>
+              <input type="text" id="editNotes" class="w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+          <button type="submit" id="btnSaveEdit" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL POPUP: KONFIRMASI HAPUS DATA         -->
+  <!-- ========================================== -->
+  <div id="deleteModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" onclick="if(event.target === this) closeDeleteModal()">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5 text-center border border-slate-100">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-800">Hapus Catatan Rujukan?</h3>
+        <p class="text-xs text-slate-500 mt-1">Data yang dihapus akan hilang permanen dari Cloud Database dan tidak dapat dikembalikan.</p>
+      </div>
+
+      <div id="deleteRecordSummary" class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-left text-xs space-y-1.5">
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Pasien:</span>
+          <span id="delSummaryPatient" class="font-bold text-slate-800 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Tujuan RS:</span>
+          <span id="delSummaryHospital" class="font-semibold text-emerald-700 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Waktu:</span>
+          <span id="delSummaryDate" class="text-slate-700 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2 pt-1 border-t border-slate-200">
+          <span class="text-slate-500">Talangan:</span>
+          <span id="delSummaryAdvance" class="font-bold text-amber-700 text-right">Rp 0</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="closeDeleteModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+        <button type="button" id="btnConfirmDelete" onclick="confirmDeleteRecord()" class="w-full py-2.5 bg-rose-600 text-white rounded-xl text-xs font-semibold hover:bg-rose-700 shadow-md transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-trash"></i> Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL POPUP: PIN & SETTINGS                -->
+  <!-- ========================================== -->
+  <div id="pinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5 text-center border border-slate-100">
+      <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-800">Autentikasi PIN</h3>
+        <p class="text-xs text-slate-500 mt-1">Masukkan PIN keamanan untuk mengakses menu pengaturan aplikasi.</p>
+      </div>
+
+      <div>
+        <input type="password" id="pinInput" placeholder="••••" maxlength="6" onkeydown="if(event.key === 'Enter') verifyPinCode()" class="w-full text-center tracking-widest text-xl px-4 py-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-slate-50 font-mono">
+        <p id="pinErrorMsg" class="text-[11px] text-rose-500 font-medium mt-1.5 hidden">PIN yang Anda masukkan salah!</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="closePinModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+        <button type="button" onclick="verifyPinCode()" class="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 shadow-md transition">Masuk</button>
+      </div>
+      <p class="text-[10px] text-slate-400">Default PIN awal: <b class="font-mono text-slate-600">1234</b></p>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6 border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-gear text-emerald-600"></i> Pengaturan Aplikasi
+        </h3>
+        <button type="button" onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="flex space-x-2 border-b text-xs font-semibold overflow-x-auto pb-1">
+        <button type="button" onclick="switchSettingsTab('staff')" id="tabBtnStaff" class="pb-2 px-3 border-b-2 border-emerald-600 text-emerald-700 whitespace-nowrap">Master Nakes</button>
+        <button type="button" onclick="switchSettingsTab('hospital')" id="tabBtnHospital" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Master RS & Nominal</button>
+        <button type="button" onclick="switchSettingsTab('security')" id="tabBtnSecurity" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Keamanan PIN</button>
+        <button type="button" onclick="switchSettingsTab('firebase')" id="tabBtnFirebase" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Firebase</button>
+        <button type="button" onclick="switchSettingsTab('about')" id="tabBtnAbout" class="pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap">Tentang</button>
+      </div>
+
+      <!-- Konten Tab 1: Master Nakes -->
+      <div id="tabContentStaff" class="space-y-4">
+        <p class="text-xs text-slate-500">Kelola daftar nama perawat dan bidan pendamping.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-50 p-4 rounded-2xl border space-y-2">
+            <span class="text-xs font-bold text-slate-700">Daftar Perawat</span>
+            <div class="flex gap-1.5">
+              <input type="text" id="newNurseInput" placeholder="Nama Perawat..." class="w-full px-3 py-2 border rounded-xl text-xs bg-white">
+              <button type="button" onclick="addStaffMember('Perawat')" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah</button>
+            </div>
+            <div id="nurseListContainer" class="bg-white p-2.5 rounded-xl border max-h-36 overflow-y-auto space-y-1 text-xs"></div>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-2xl border space-y-2">
+            <span class="text-xs font-bold text-slate-700">Daftar Bidan</span>
+            <div class="flex gap-1.5">
+              <input type="text" id="newMidwifeInput" placeholder="Nama Bidan..." class="w-full px-3 py-2 border rounded-xl text-xs bg-white">
+              <button type="button" onclick="addStaffMember('Bidan')" class="bg-emerald-600 text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah</button>
+            </div>
+            <div id="midwifeListContainer" class="bg-white p-2.5 rounded-xl border max-h-36 overflow-y-auto space-y-1 text-xs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Konten Tab 2: Master RS & Nominal Klaim -->
+      <div id="tabContentHospital" class="space-y-4 hidden">
+        <p class="text-xs text-slate-500">Kelola Rumah Sakit rujukan beserta pengaturan otomatis nominal rencana klaimnya (Rp).</p>
+        <div class="bg-slate-50 p-4 rounded-2xl border space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            <input type="text" id="newHospitalName" placeholder="Nama RS (Cth: RSUD Kotabaru)" class="px-3 py-2 border rounded-xl text-xs bg-white">
+            <input type="number" id="newHospitalClaim" placeholder="Nominal Klaim (Rp)" class="px-3 py-2 border rounded-xl text-xs bg-white">
+            <button type="button" onclick="addHospital()" class="bg-emerald-600 text-white py-2 rounded-xl text-xs font-semibold hover:bg-emerald-700 transition">Tambah RS & Tarif</button>
+          </div>
+          <div id="hospitalListContainer" class="bg-white p-2.5 rounded-xl border max-h-52 overflow-y-auto space-y-1 text-xs"></div>
+        </div>
+      </div>
+
+      <!-- Konten Tab 3: Keamanan PIN -->
+      <div id="tabContentSecurity" class="space-y-4 hidden">
+        <div class="bg-amber-50 border border-amber-200 p-5 rounded-2xl space-y-3 text-xs">
+          <h4 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved"></i> Ubah PIN Akses Pengaturan
+          </h4>
+          <p class="text-slate-600">PIN ini digunakan untuk mencegah orang lain mengubah master data atau konfigurasi aplikasi tanpa izin.</p>
+          <div class="space-y-2 pt-2">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">PIN Baru (Min. 4 Digit)</label>
+              <input type="password" id="newPinInput" placeholder="Masukkan 4-6 digit PIN baru..." maxlength="6" class="w-full px-3 py-2.5 border rounded-xl bg-white text-sm font-mono">
+            </div>
+            <button type="button" onclick="updateSettingsPin()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-semibold transition">Simpan PIN Baru</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Konten Tab 4: Firebase SDK Config Info -->
+      <div id="tabContentFirebase" class="space-y-4 hidden">
+        <p class="text-xs text-slate-500">Konfigurasi Firebase Realtime Database (Tersambung ke project <b class="font-mono text-emerald-700">rujukan-a25d0</b>).</p>
+        <div class="bg-slate-50 p-4 rounded-2xl border font-mono text-[11px] text-slate-700 space-y-1">
+          <p>apiKey: "AIzaSyAFwdLKdMFEPYjHKPC27fgUY_PMBtFqaTA"</p>
+          <p>authDomain: "rujukan-a25d0.firebaseapp.com"</p>
+          <p>databaseURL: "https://rujukan-a25d0-default-rtdb.asia-southeast1.firebasedatabase.app"</p>
+          <p>projectId: "rujukan-a25d0"</p>
+        </div>
+      </div>
+
+      <!-- Konten Tab 5: Tentang & Versi -->
+      <div id="tabContentAbout" class="space-y-4 hidden">
+        <div class="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl space-y-2 text-xs">
+          <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-circle-info"></i> Informasi Versi Aplikasi
+          </h4>
+          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.4.8</b></p>
+          <p class="text-slate-600">Aplikasi Presensi Rujukan & Dana Talangan UGD UPTD Puskesmas Sampanahan.</p>
+        </div>
+        <button type="button" onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
+      </div>
+
+      <div class="flex justify-end pt-3 border-t">
+        <button type="button" onclick="closeSettingsModal()" class="px-5 py-2.5 bg-slate-700 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Slip Container -->
+  <div id="printArea" class="hidden p-8 max-w-xl mx-auto bg-white border border-slate-300">
+    <div class="text-center border-b pb-4 mb-4">
+      <h2 class="text-lg font-bold uppercase tracking-wide">UPTD PUSKESMAS SAMPANAHAN</h2>
+      <p id="printAreaSubtitle" class="text-xs text-slate-600">LEMBAR PRESENSI RUJUKAN & RINCIAN DANA TALANGAN</p>
+    </div>
+    <div class="space-y-2 text-sm" id="printContent"></div>
+    <div class="mt-8 grid grid-cols-2 gap-4 text-center text-xs pt-4 border-t">
+      <div>
+        <p id="printLeftSignTitle" class="mb-10">Pendamping / Driver,</p>
+        <p class="font-bold underline" id="printSignStaff"></p>
+      </div>
+      <div>
+        <p id="printRightSignTitle" class="mb-10">Petugas UGD / Admin,</p>
+        <p class="font-bold underline">( .................................... )</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK Compat v9 -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ==========================================
+    // KONFIGURASI FIREBASE ANDA (rujukan-a25d0)
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAFwdLKdMFEPYjHKPC27fgUY_PMBtFqaTA",
+      authDomain: "rujukan-a25d0.firebaseapp.com",
+      databaseURL: "https://rujukan-a25d0-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "rujukan-a25d0",
+      storageBucket: "rujukan-a25d0.firebasestorage.app",
+      messagingSenderId: "713815923999",
+      appId: "1:713815923999:web:3ee08c5d96fc08b9e1242a"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const APP_VERSION = "v1.4.8";
+
+    const ROLE_CHECKLIST_OPTIONS = {
+      Perawat: [
+        'TTV & stabilisasi / infus / O2 siap',
+        'Lembar rujukan & pengantar RS lengkap',
+        'KIE keluarga & serah terima SBAR'
+      ],
+      Bidan: [
+        'Buku KIA / partograf / rujukan maternal',
+        'Obat & perlengkapan protap siap',
+        'Pemantauan ibu/bayi & kehangatan terjaga'
+      ],
+      Lainnya: [
+        'Kelengkapan berkas rujukan dicek',
+        'Koordinasi keluarga & tujuan RS jelas'
+      ]
+    };
+
+    let masterStaff = JSON.parse(localStorage.getItem('ugd_master_staff') || JSON.stringify({
+      Perawat: ['Agus, S.Kep', 'Rina, Amd.Kep', 'Hendra, Amd.Kep', 'Siti, S.Kep', 'Budi, Amd.Kep'],
+      Bidan: ['Bdn. Rahma, Amd.Keb', 'Bdn. Anita, Str.Keb', 'Bdn. Dewi, Amd.Keb', 'Bdn. Yuni, Amd.Keb']
+    }));
+
+    let masterHospitals = JSON.parse(localStorage.getItem('ugd_master_hospitals') || JSON.stringify([
+      { name: 'RSUD Kotabaru', claim: 750000 },
+      { name: 'RSUD Pangeran Antasari', claim: 700000 },
+      { name: 'RS Hasan Basry Kandangan', claim: 900000 },
+      { name: 'RSUD Ulin Banjarmasin', claim: 1200000 },
+      { name: 'RS Bhayangkara Banjarmasin', claim: 1100000 }
+    ]));
+
+    let referralRecords = [];
+    let latestFilteredRecords = [];
+    let activeSearchQuery = '';
+    let activeHistoryView = 'table';
+    let pendingDeleteIdKey = null;
+    let appSettingsPin = localStorage.getItem('ugd_settings_pin') || '1234';
+
+    function openPinModal() {
+      document.getElementById('pinModal').classList.remove('hidden');
+      document.getElementById('pinInput').value = '';
+      document.getElementById('pinErrorMsg').classList.add('hidden');
+      setTimeout(() => document.getElementById('pinInput').focus(), 100);
+    }
+
+    function closePinModal() {
+      document.getElementById('pinModal').classList.add('hidden');
+    }
+
+    function verifyPinCode() {
+      const enteredPin = document.getElementById('pinInput').value.trim();
+      const errorMsg = document.getElementById('pinErrorMsg');
+
+      if (enteredPin === appSettingsPin) {
+        closePinModal();
+        openSettingsModal();
+      } else {
+        errorMsg.classList.remove('hidden');
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
+    }
+
+    function updateSettingsPin() {
+      const newPin = document.getElementById('newPinInput').value.trim();
+      if (!newPin || newPin.length < 4) {
+        alert("PIN baru minimal harus 4 digit!");
+        return;
+      }
+      appSettingsPin = newPin;
+      localStorage.setItem('ugd_settings_pin', appSettingsPin);
+      document.getElementById('newPinInput').value = '';
+      alert("✅ PIN Pengaturan berhasil diperbarui!");
+    }
+
+    function initFirebaseSync() {
+      const statusEl = document.getElementById('syncStatus');
+      const ref = db.ref('ugd_referrals');
+
+      ref.on('value', (snapshot) => {
+        const data = snapshot.val();
+        const nextRecords = [];
+        if (data && typeof data === 'object') {
+          Object.keys(data).forEach(key => {
+            if (data[key] && typeof data[key] === 'object') {
+              nextRecords.push({
+                idKey: String(key),
+                ...data[key],
+                id: Number(data[key].id) || Number(key) || 0
+              });
+            }
+          });
+          nextRecords.sort((a, b) => (b.id || 0) - (a.id || 0));
+        }
+        referralRecords = nextRecords;
+        statusEl.innerHTML = `<i class="fa-solid fa-cloud text-white mr-1"></i> Terhubung Cloud`;
+        renderTable();
+      }, (error) => {
+        statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-300 mr-1"></i> Gagal Sinkron`;
+        console.error(error);
+      });
+    }
+
+    function initClock() {
+      const now = new Date();
+      const localISOTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+      document.getElementById('datetime').value = localISOTime;
+    }
+
+    function renderHospitalDropdown() {
+      const select = document.getElementById('hospitalSelect');
+      select.innerHTML = '';
+      masterHospitals.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.name;
+        opt.setAttribute('data-claim', h.claim);
+        opt.innerText = `${h.name} (Klaim: Rp ${Number(h.claim).toLocaleString('id-ID')})`;
+        select.appendChild(opt);
+      });
+      const otherOpt = document.createElement('option');
+      otherOpt.value = 'OTHER';
+      otherOpt.setAttribute('data-claim', '0');
+      otherOpt.innerText = '-- Ketik RS Lainnya --';
+      select.appendChild(otherOpt);
+      
+      onHospitalChange();
+    }
+
+    function onHospitalChange() {
+      const select = document.getElementById('hospitalSelect');
+      const manualInput = document.getElementById('hospitalManual');
+      const claimInput = document.getElementById('claimAmount');
+
+      if (select.value === 'OTHER') {
+        manualInput.classList.remove('hidden');
+        manualInput.required = true;
+        manualInput.focus();
+        claimInput.value = '';
+      } else {
+        manualInput.classList.add('hidden');
+        manualInput.required = false;
+        manualInput.value = '';
+
+        const selectedOption = select.options[select.selectedIndex];
+        const defaultClaim = selectedOption ? (selectedOption.getAttribute('data-claim') || '0') : '0';
+        claimInput.value = defaultClaim;
+      }
+    }
+
+    function toggleAdvanceInput(hasAdvance) {
+      const grid = document.getElementById('advanceFieldsGrid');
+      const fuelInput = document.getElementById('fuelAmount');
+      
+      if (hasAdvance) {
+        grid.style.opacity = '1';
+        grid.style.pointerEvents = 'auto';
+        fuelInput.required = true;
+      } else {
+        grid.style.opacity = '0.4';
+        grid.style.pointerEvents = 'none';
+        fuelInput.required = false;
+        fuelInput.value = '';
+        document.getElementById('mealAmount').value = '';
+      }
+    }
+
+    // ==========================================
+    // MENU GABUNGAN / TERINTEGRASI PERAWAT & BIDAN
+    // ==========================================
+    function renderRoleAdaptiveSection(role, checkedItems = [], noteVal = '') {
+      const box = document.getElementById('roleAdaptiveBox');
+      const titleEl = document.getElementById('roleAdaptiveTitle');
+      const itemsEl = document.getElementById('roleChecklistItems');
+      const noteEl = document.getElementById('roleClinicalNote');
+
+      const safeRole = ['Perawat', 'Bidan', 'Lainnya'].includes(role) ? role : 'Perawat';
+      const options = ROLE_CHECKLIST_OPTIONS[safeRole] || [];
+      const selectedSet = new Set(Array.isArray(checkedItems) ? checkedItems : []);
+
+      if (safeRole === 'Bidan') {
+        box.className = 'bg-rose-50/70 border border-rose-200 rounded-xl p-3 space-y-2';
+        titleEl.className = 'text-[11px] font-bold text-rose-900 flex items-center gap-1.5';
+        titleEl.innerHTML = `<i class="fa-solid fa-baby"></i> Checklist & Catatan Rujukan Bidan (Maternal/Neonatal)`;
+        noteEl.className = 'w-full px-2.5 py-1.5 border border-rose-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-rose-400 focus:outline-none';
+        noteEl.placeholder = 'Catatan maternal/neonatal (cth: UK 38 mgg, DJJ stabil)...';
+      } else if (safeRole === 'Perawat') {
+        box.className = 'bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 space-y-2';
+        titleEl.className = 'text-[11px] font-bold text-emerald-900 flex items-center gap-1.5';
+        titleEl.innerHTML = `<i class="fa-solid fa-stethoscope"></i> Checklist & Catatan Rujukan Perawat (UGD/SBAR)`;
+        noteEl.className = 'w-full px-2.5 py-1.5 border border-emerald-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none';
+        noteEl.placeholder = 'Catatan stabilisasi/SBAR (cth: TD/SpO2 stabil selama perjalanan)...';
+      } else {
+        box.className = 'bg-slate-100/80 border border-slate-300 rounded-xl p-3 space-y-2';
+        titleEl.className = 'text-[11px] font-bold text-slate-800 flex items-center gap-1.5';
+        titleEl.innerHTML = `<i class="fa-solid fa-clipboard-check"></i> Checklist & Catatan Pendamping Lainnya`;
+        noteEl.className = 'w-full px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none';
+        noteEl.placeholder = 'Catatan singkat perjalanan/koordinasi...';
+      }
+
+      itemsEl.innerHTML = options.map(opt => {
+        const checked = selectedSet.has(opt) ? 'checked' : '';
+        return `
+          <label class="flex items-start space-x-2 cursor-pointer">
+            <input type="checkbox" name="roleChecklist" value="${opt}" ${checked} class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+            <span>${opt}</span>
+          </label>
+        `;
+      }).join('');
+
+      if (noteVal !== undefined) {
+        noteEl.value = noteVal;
+      }
+    }
+
+    function onRoleModeChanged() {
+      const role = document.querySelector('input[name="staffRole"]:checked').value;
+      renderStaffList();
+      renderRoleAdaptiveSection(role, [], '');
+    }
+
+    function renderEditRoleAdaptiveSection(role, checkedItems = [], noteVal = '') {
+      const box = document.getElementById('editRoleAdaptiveBox');
+      const titleEl = document.getElementById('editRoleAdaptiveTitle');
+      const itemsEl = document.getElementById('editRoleChecklistItems');
+      const noteEl = document.getElementById('editRoleClinicalNote');
+
+      const safeRole = ['Perawat', 'Bidan', 'Lainnya'].includes(role) ? role : 'Perawat';
+      const options = ROLE_CHECKLIST_OPTIONS[safeRole] || [];
+      const selectedSet = new Set(Array.isArray(checkedItems) ? checkedItems : []);
+
+      if (safeRole === 'Bidan') {
+        box.className = 'bg-rose-50/70 border border-rose-200 rounded-xl p-2.5 space-y-1.5';
+        titleEl.className = 'text-[11px] font-bold text-rose-900';
+        titleEl.innerText = 'Checklist & Catatan Rujukan Bidan';
+      } else if (safeRole === 'Perawat') {
+        box.className = 'bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5 space-y-1.5';
+        titleEl.className = 'text-[11px] font-bold text-emerald-900';
+        titleEl.innerText = 'Checklist & Catatan Rujukan Perawat';
+      } else {
+        box.className = 'bg-slate-100 border border-slate-300 rounded-xl p-2.5 space-y-1.5';
+        titleEl.className = 'text-[11px] font-bold text-slate-800';
+        titleEl.innerText = 'Checklist & Catatan Pendamping Lainnya';
+      }
+
+      itemsEl.innerHTML = options.map(opt => {
+        const checked = selectedSet.has(opt) ? 'checked' : '';
+        return `
+          <label class="flex items-start space-x-2 cursor-pointer">
+            <input type="checkbox" name="editRoleChecklist" value="${opt}" ${checked} class="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+            <span>${opt}</span>
+          </label>
+        `;
+      }).join('');
+
+      if (noteVal !== undefined) {
+        noteEl.value = noteVal;
+      }
+    }
+
+    function onEditRoleModeChanged() {
+      const role = document.querySelector('input[name="editStaffRole"]:checked').value;
+      renderEditStaffList('');
+      renderEditRoleAdaptiveSection(role, [], '');
+    }
+
+    function renderStaffList() {
+      const selectedRole = document.querySelector('input[name="staffRole"]:checked').value;
+      const checklistContainer = document.getElementById('staffChecklist');
+      const manualContainer = document.getElementById('manualStaffContainer');
+
+      checklistContainer.innerHTML = '';
+
+      if (selectedRole === 'Lainnya') {
+        checklistContainer.classList.add('hidden');
+        manualContainer.classList.remove('hidden');
+      } else {
+        checklistContainer.classList.remove('hidden');
+        manualContainer.classList.add('hidden');
+
+        const names = masterStaff[selectedRole] || [];
+        names.forEach((name) => {
+          const label = document.createElement('label');
+          label.className = 'flex items-center space-x-1.5 cursor-pointer text-slate-700 hover:text-emerald-700';
+          label.innerHTML = `
+            <input type="checkbox" name="staffNames" value="${name}" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+            <span class="truncate">${name}</span>
+          `;
+          checklistContainer.appendChild(label);
+        });
+      }
+    }
+
+    function saveDataToFirebase(e) {
+      e.preventDefault();
+
+      const selectedRole = document.querySelector('input[name="staffRole"]:checked').value;
+      let selectedStaff = [];
+
+      if (selectedRole === 'Lainnya') {
+        const manualVal = document.getElementById('manualStaff').value.trim();
+        if (manualVal) selectedStaff.push(manualVal);
+      } else {
+        const checkedBoxes = document.querySelectorAll('input[name="staffNames"]:checked');
+        checkedBoxes.forEach(cb => selectedStaff.push(cb.value));
+      }
+
+      if (selectedStaff.length === 0) {
+        alert('Harap pilih minimal 1 nama pendamping (Nakes)!');
+        return;
+      }
+
+      let hospitalVal = document.getElementById('hospitalSelect').value;
+      if (hospitalVal === 'OTHER') {
+        hospitalVal = document.getElementById('hospitalManual').value.trim();
+        if (!hospitalVal) {
+          alert('Harap masukkan nama Rumah Sakit tujuan!');
+          return;
+        }
+      }
+
+      const roleChecklist = Array.from(document.querySelectorAll('input[name="roleChecklist"]:checked')).map(el => el.value);
+      const roleClinicalNote = document.getElementById('roleClinicalNote').value.trim();
+
+      const hasAdvance = document.querySelector('input[name="hasAdvance"]:checked').value === 'Ya';
+      const fuelAmount = hasAdvance ? parseFloat(document.getElementById('fuelAmount').value) || 0 : 0;
+      const mealAmount = hasAdvance ? parseFloat(document.getElementById('mealAmount').value) || 0 : 0;
+      const totalAdvance = fuelAmount + mealAmount;
+      const claimAmount = parseFloat(document.getElementById('claimAmount').value) || 0;
+
+      const recordId = Date.now();
+      const record = {
+        id: recordId,
+        datetime: document.getElementById('datetime').value,
+        patientName: document.getElementById('patientName').value,
+        insurance: document.querySelector('input[name="insurance"]:checked').value,
+        vehicle: document.querySelector('input[name="vehicle"]:checked').value,
+        hospital: hospitalVal,
+        claimAmount: claimAmount,
+        role: selectedRole,
+        staff: selectedStaff.join(', '),
+        roleChecklist: roleChecklist,
+        roleClinicalNote: roleClinicalNote,
+        driver: document.getElementById('driverName').value,
+        notes: document.getElementById('notes').value || '-',
+        hasAdvance: hasAdvance,
+        fuelAmount: fuelAmount,
+        mealAmount: mealAmount,
+        advanceAmount: totalAdvance,
+        advanceStatus: hasAdvance ? 'Belum Diganti' : 'Tidak Ada'
+      };
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...`;
+
+      db.ref('ugd_referrals/' + recordId).set(record)
+        .then(() => {
+          resetForm();
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Simpan ke Cloud`;
+        })
+        .catch((error) => {
+          alert('Gagal menyimpan ke database: ' + error.message);
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Simpan ke Cloud`;
+        });
+    }
+
+    // ==========================================
+    // EDIT / KOREKSI DATA RUJUKAN TERSIMPAN
+    // ==========================================
+    function renderEditHospitalDropdown(currentHospital) {
+      const select = document.getElementById('editHospitalSelect');
+      const manualInput = document.getElementById('editHospitalManual');
+      select.innerHTML = '';
+
+      let isMatched = false;
+      masterHospitals.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.name;
+        opt.setAttribute('data-claim', h.claim);
+        opt.innerText = `${h.name} (Klaim: Rp ${Number(h.claim).toLocaleString('id-ID')})`;
+        if (h.name === currentHospital) {
+          opt.selected = true;
+          isMatched = true;
+        }
+        select.appendChild(opt);
+      });
+
+      const otherOpt = document.createElement('option');
+      otherOpt.value = 'OTHER';
+      otherOpt.setAttribute('data-claim', '0');
+      otherOpt.innerText = '-- Ketik RS Lainnya --';
+      if (!isMatched) {
+        otherOpt.selected = true;
+      }
+      select.appendChild(otherOpt);
+
+      if (!isMatched) {
+        manualInput.classList.remove('hidden');
+        manualInput.required = true;
+        manualInput.value = (currentHospital && currentHospital !== 'undefined') ? currentHospital : '';
+      } else {
+        manualInput.classList.add('hidden');
+        manualInput.required = false;
+        manualInput.value = '';
+      }
+    }
+
+    function onEditHospitalChange() {
+      const select = document.getElementById('editHospitalSelect');
+      const manualInput = document.getElementById('editHospitalManual');
+      const claimInput = document.getElementById('editClaimAmount');
+
+      if (select.value === 'OTHER') {
+        manualInput.classList.remove('hidden');
+        manualInput.required = true;
+        manualInput.focus();
+      } else {
+        manualInput.classList.add('hidden');
+        manualInput.required = false;
+        manualInput.value = '';
+        const selectedOption = select.options[select.selectedIndex];
+        const defaultClaim = selectedOption ? (selectedOption.getAttribute('data-claim') || '') : '';
+        if (!claimInput.value && defaultClaim) {
+          claimInput.value = defaultClaim;
+        }
+      }
+    }
+
+    function toggleEditAdvanceInput(hasAdvance) {
+      const grid = document.getElementById('editAdvanceFieldsGrid');
+      const statusWrapper = document.getElementById('editAdvanceStatusWrapper');
+      const fuelInput = document.getElementById('editFuelAmount');
+
+      if (hasAdvance) {
+        grid.style.opacity = '1';
+        grid.style.pointerEvents = 'auto';
+        statusWrapper.classList.remove('hidden');
+        fuelInput.required = true;
+      } else {
+        grid.style.opacity = '0.4';
+        grid.style.pointerEvents = 'none';
+        statusWrapper.classList.add('hidden');
+        fuelInput.required = false;
+        fuelInput.value = '';
+        document.getElementById('editMealAmount').value = '';
+      }
+    }
+
+    function renderEditStaffList(preselectedStaffStr = '') {
+      const roleEl = document.querySelector('input[name="editStaffRole"]:checked');
+      const selectedRole = roleEl ? roleEl.value : 'Perawat';
+      const checklistContainer = document.getElementById('editStaffChecklist');
+      const manualContainer = document.getElementById('editManualStaffContainer');
+      const manualInput = document.getElementById('editManualStaff');
+
+      checklistContainer.innerHTML = '';
+      const selectedNames = String(preselectedStaffStr || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (selectedRole === 'Lainnya') {
+        checklistContainer.classList.add('hidden');
+        manualContainer.classList.remove('hidden');
+        if (preselectedStaffStr !== undefined && !manualInput.dataset.initialized) {
+          manualInput.value = selectedNames.join(', ');
+        }
+      } else {
+        checklistContainer.classList.remove('hidden');
+        manualContainer.classList.add('hidden');
+
+        const names = masterStaff[selectedRole] || [];
+        names.forEach((name) => {
+          const isChecked = selectedNames.includes(name) ? 'checked' : '';
+          const label = document.createElement('label');
+          label.className = 'flex items-center space-x-1.5 cursor-pointer text-slate-700 hover:text-emerald-700';
+          label.innerHTML = `
+            <input type="checkbox" name="editStaffNames" value="${name}" ${isChecked} class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+            <span class="truncate">${name}</span>
+          `;
+          checklistContainer.appendChild(label);
+        });
+      }
+      manualInput.dataset.initialized = 'true';
+    }
+
+    function openEditModal(event, idKey) {
+      if (event) event.stopPropagation();
+      const cleanId = String(idKey);
+      const record = referralRecords.find(r => String(r.idKey) === cleanId);
+      if (!record) {
+        alert('Data rujukan tidak ditemukan!');
+        return;
+      }
+
+      document.getElementById('editRecordIdKey').value = cleanId;
+      document.getElementById('editDatetime').value = record.datetime || '';
+      document.getElementById('editPatientName').value = record.patientName || '';
+      document.getElementById('editClaimAmount').value = Number(record.claimAmount) || 0;
+      document.getElementById('editDriverName').value = record.driver || '';
+      document.getElementById('editNotes').value = (record.notes && record.notes !== '-') ? record.notes : '';
+
+      const insVal = record.insurance === 'Umum' ? 'Umum' : 'BPJS';
+      const insRadio = document.querySelector(`input[name="editInsurance"][value="${insVal}"]`);
+      if (insRadio) insRadio.checked = true;
+
+      const vehVal = record.vehicle || 'Ambulan Puskesmas';
+      const vehRadio = document.querySelector(`input[name="editVehicle"][value="${vehVal}"]`);
+      if (vehRadio) {
+        vehRadio.checked = true;
+      } else {
+        const defaultVeh = document.querySelector('input[name="editVehicle"][value="Ambulan Puskesmas"]');
+        if (defaultVeh) defaultVeh.checked = true;
+      }
+
+      renderEditHospitalDropdown(record.hospital || '');
+
+      const fuelVal = Number(record.fuelAmount) || 0;
+      const mealVal = Number(record.mealAmount) || 0;
+      const totalAdvVal = Number(record.advanceAmount) || (fuelVal + mealVal);
+      const hasAdv = Boolean(record.hasAdvance) || totalAdvVal > 0;
+
+      const advRadio = document.querySelector(`input[name="editHasAdvance"][value="${hasAdv ? 'Ya' : 'Tidak'}"]`);
+      if (advRadio) advRadio.checked = true;
+
+      document.getElementById('editFuelAmount').value = hasAdv ? fuelVal : '';
+      document.getElementById('editMealAmount').value = hasAdv ? mealVal : '';
+      document.getElementById('editAdvanceStatus').value = record.advanceStatus === 'Sudah Diganti' ? 'Sudah Diganti' : 'Belum Diganti';
+      toggleEditAdvanceInput(hasAdv);
+
+      const roleVal = ['Perawat', 'Bidan', 'Lainnya'].includes(record.role) ? record.role : 'Perawat';
+      const roleRadio = document.querySelector(`input[name="editStaffRole"][value="${roleVal}"]`);
+      if (roleRadio) roleRadio.checked = true;
+
+      const manualInput = document.getElementById('editManualStaff');
+      delete manualInput.dataset.initialized;
+      manualInput.value = roleVal === 'Lainnya' ? (record.staff || '') : '';
+      renderEditStaffList(record.staff || '');
+      renderEditRoleAdaptiveSection(
+        roleVal,
+        Array.isArray(record.roleChecklist) ? record.roleChecklist : [],
+        record.roleClinicalNote || ''
+      );
+
+      const saveBtn = document.getElementById('btnSaveEdit');
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan`;
+
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    function updateDataInFirebase(e) {
+      e.preventDefault();
+
+      const cleanId = String(document.getElementById('editRecordIdKey').value || '').trim();
+      if (!cleanId) return;
+
+      const existing = referralRecords.find(r => String(r.idKey) === cleanId);
+
+      const selectedRole = document.querySelector('input[name="editStaffRole"]:checked').value;
+      let selectedStaff = [];
+
+      if (selectedRole === 'Lainnya') {
+        const manualVal = document.getElementById('editManualStaff').value.trim();
+        if (manualVal) selectedStaff.push(manualVal);
+      } else {
+        const checkedBoxes = document.querySelectorAll('input[name="editStaffNames"]:checked');
+        checkedBoxes.forEach(cb => selectedStaff.push(cb.value));
+      }
+
+      if (selectedStaff.length === 0) {
+        alert('Harap pilih minimal 1 nama pendamping (Nakes)!');
+        return;
+      }
+
+      let hospitalVal = document.getElementById('editHospitalSelect').value;
+      if (hospitalVal === 'OTHER') {
+        hospitalVal = document.getElementById('editHospitalManual').value.trim();
+        if (!hospitalVal) {
+          alert('Harap masukkan nama Rumah Sakit tujuan!');
+          return;
+        }
+      }
+
+      const roleChecklist = Array.from(document.querySelectorAll('input[name="editRoleChecklist"]:checked')).map(el => el.value);
+      const roleClinicalNote = document.getElementById('editRoleClinicalNote').value.trim();
+
+      const hasAdvance = document.querySelector('input[name="editHasAdvance"]:checked').value === 'Ya';
+      const fuelAmount = hasAdvance ? parseFloat(document.getElementById('editFuelAmount').value) || 0 : 0;
+      const mealAmount = hasAdvance ? parseFloat(document.getElementById('editMealAmount').value) || 0 : 0;
+      const totalAdvance = fuelAmount + mealAmount;
+      const claimAmount = parseFloat(document.getElementById('editClaimAmount').value) || 0;
+      const advanceStatus = hasAdvance
+        ? (document.getElementById('editAdvanceStatus').value === 'Sudah Diganti' ? 'Sudah Diganti' : 'Belum Diganti')
+        : 'Tidak Ada';
+
+      const updatedFields = {
+        datetime: document.getElementById('editDatetime').value,
+        patientName: document.getElementById('editPatientName').value.trim(),
+        insurance: document.querySelector('input[name="editInsurance"]:checked').value,
+        vehicle: document.querySelector('input[name="editVehicle"]:checked').value,
+        hospital: hospitalVal,
+        claimAmount: claimAmount,
+        role: selectedRole,
+        staff: selectedStaff.join(', '),
+        roleChecklist: roleChecklist,
+        roleClinicalNote: roleClinicalNote,
+        driver: document.getElementById('editDriverName').value.trim(),
+        notes: document.getElementById('editNotes').value.trim() || '-',
+        hasAdvance: hasAdvance,
+        fuelAmount: fuelAmount,
+        mealAmount: mealAmount,
+        advanceAmount: totalAdvance,
+        advanceStatus: advanceStatus,
+        updatedAt: Date.now()
+      };
+
+      if (!existing) {
+        updatedFields.id = Number(cleanId) || Date.now();
+      }
+
+      const saveBtn = document.getElementById('btnSaveEdit');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+
+      db.ref('ugd_referrals/' + cleanId).update(updatedFields)
+        .then(() => {
+          closeEditModal();
+        })
+        .catch((error) => {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan`;
+          alert('Gagal menyimpan perubahan ke database: ' + error.message);
+        });
+    }
+
+    function toggleAdvanceStatus(event, idKey, currentStatus) {
+      if (event) event.stopPropagation();
+      const cleanId = String(idKey);
+      const newStatus = currentStatus === 'Belum Diganti' ? 'Sudah Diganti' : 'Belum Diganti';
+      db.ref('ugd_referrals/' + cleanId).update({ advanceStatus: newStatus })
+        .catch(err => alert('Gagal memperbarui status: ' + err.message));
+    }
+
+    // ==========================================
+    // REKAP PENCAIRAN TALANGAN PER PETUGAS & DRIVER
+    // ==========================================
+    function switchHistoryView(viewName) {
+      activeHistoryView = viewName === 'recap' ? 'recap' : 'table';
+      const panelTable = document.getElementById('panelTableView');
+      const panelRecap = document.getElementById('panelRecapView');
+      const tabTable = document.getElementById('viewTabTable');
+      const tabRecap = document.getElementById('viewTabRecap');
+
+      if (activeHistoryView === 'recap') {
+        panelTable.classList.add('hidden');
+        panelRecap.classList.remove('hidden');
+        tabRecap.className = 'px-3 py-1 rounded-lg bg-white text-emerald-700 shadow-sm transition';
+        tabTable.className = 'px-3 py-1 rounded-lg text-slate-600 hover:text-slate-800 transition';
+        renderRecapPerPerson();
+      } else {
+        panelRecap.classList.add('hidden');
+        panelTable.classList.remove('hidden');
+        tabTable.className = 'px-3 py-1 rounded-lg bg-white text-emerald-700 shadow-sm transition';
+        tabRecap.className = 'px-3 py-1 rounded-lg text-slate-600 hover:text-slate-800 transition';
+      }
+    }
+
+    function buildPersonRecapRows(records) {
+      const map = new Map();
+
+      const addEntry = (rawName, roleLabel, rec) => {
+        const cleanName = String(rawName || '').trim();
+        if (!cleanName || cleanName === '-') return;
+
+        const key = `${roleLabel}::${cleanName.toLowerCase()}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            name: cleanName,
+            role: roleLabel,
+            tripCount: 0,
+            fuelSum: 0,
+            mealSum: 0,
+            pendingSum: 0,
+            paidSum: 0,
+            pendingKeys: new Set()
+          });
+        }
+
+        const item = map.get(key);
+        const fuelVal = Number(rec.fuelAmount) || 0;
+        const mealVal = Number(rec.mealAmount) || 0;
+        const totalAdv = Number(rec.advanceAmount) || (fuelVal + mealVal);
+        const hasAdv = Boolean(rec.hasAdvance) || totalAdv > 0;
+        const statusVal = rec.advanceStatus === 'Sudah Diganti' ? 'Sudah Diganti' : 'Belum Diganti';
+
+        item.tripCount += 1;
+        if (hasAdv) {
+          item.fuelSum += fuelVal;
+          item.mealSum += mealVal;
+          if (statusVal === 'Sudah Diganti') {
+            item.paidSum += totalAdv;
+          } else {
+            item.pendingSum += totalAdv;
+            item.pendingKeys.add(String(rec.idKey));
+          }
+        }
+      };
+
+      (Array.isArray(records) ? records : []).forEach(rec => {
+        if (!rec || typeof rec !== 'object') return;
+        const staffRoleLabel = ['Perawat', 'Bidan', 'Lainnya'].includes(rec.role) ? rec.role : 'Perawat';
+        const staffList = String(rec.staff || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+        staffList.forEach(sName => addEntry(sName, staffRoleLabel, rec));
+
+        if (rec.driver && String(rec.driver).trim() && String(rec.driver).trim() !== '-') {
+          addEntry(rec.driver, 'Driver', rec);
+        }
+      });
+
+      return Array.from(map.values()).sort((a, b) => {
+        if (b.pendingSum !== a.pendingSum) return b.pendingSum - a.pendingSum;
+        return a.name.localeCompare(b.name, 'id');
+      });
+    }
+
+    function renderRoleBadge(roleLabel) {
+      if (roleLabel === 'Driver') {
+        return `<span class="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold">Driver</span>`;
+      }
+      if (roleLabel === 'Bidan') {
+        return `<span class="bg-rose-100 text-rose-800 text-[10px] px-2 py-0.5 rounded-full font-bold">Bidan</span>`;
+      }
+      if (roleLabel === 'Lainnya') {
+        return `<span class="bg-slate-200 text-slate-800 text-[10px] px-2 py-0.5 rounded-full font-bold">Lainnya</span>`;
+      }
+      return `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">Perawat</span>`;
+    }
+
+    function renderRecapPerPerson() {
+      const tbody = document.getElementById('recapPersonTable');
+      const roleFilterEl = document.getElementById('recapRoleFilter');
+      const periodLabelEl = document.getElementById('recapPeriodLabel');
+      const startVal = (document.getElementById('startDate')?.value || '').trim();
+      const endVal = (document.getElementById('endDate')?.value || '').trim();
+
+      if (periodLabelEl) {
+        if (startVal && endVal) periodLabelEl.innerText = `Periode: ${startVal} s/d ${endVal}`;
+        else if (startVal) periodLabelEl.innerText = `Periode: Mulai ${startVal}`;
+        else if (endVal) periodLabelEl.innerText = `Periode: Sampai ${endVal}`;
+        else periodLabelEl.innerText = 'Periode: Semua Data';
+      }
+
+      if (!tbody) return;
+      const roleFilter = roleFilterEl ? roleFilterEl.value : 'ALL';
+
+      const rows = buildPersonRecapRows(latestFilteredRecords).filter(item => {
+        if (roleFilter === 'ALL') return true;
+        return item.role === roleFilter;
+      });
+
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Belum ada rekap petugas atau driver pada filter saat ini.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map(item => {
+        const pendingIds = Array.from(item.pendingKeys);
+        const roleBadge = renderRoleBadge(item.role);
+
+        const encodedIds = encodeURIComponent(JSON.stringify(pendingIds));
+        const encodedName = encodeURIComponent(item.name);
+
+        const actionBtn = pendingIds.length > 0
+          ? `<button type="button" onclick="markPersonAdvancePaid('${encodedName}', '${encodedIds}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-semibold transition"><i class="fa-solid fa-check-double mr-1"></i> Cairkan (${pendingIds.length})</button>`
+          : `<span class="text-[11px] text-emerald-700 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Lunas</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50 border-b">
+            <td class="py-3 px-3 font-bold text-slate-800">${item.name}</td>
+            <td class="py-3 px-3">${roleBadge}</td>
+            <td class="py-3 px-3 text-center font-semibold text-slate-700">${item.tripCount}</td>
+            <td class="py-3 px-3 text-slate-700">${formatRupiah(item.fuelSum)}</td>
+            <td class="py-3 px-3 text-slate-700">${formatRupiah(item.mealSum)}</td>
+            <td class="py-3 px-3 font-bold text-amber-700">${formatRupiah(item.pendingSum)}</td>
+            <td class="py-3 px-3 font-bold text-emerald-700">${formatRupiah(item.paidSum)}</td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">${actionBtn}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function markPersonAdvancePaid(encodedName, encodedIds) {
+      let personName = '-';
+      let ids = [];
+      try {
+        personName = decodeURIComponent(encodedName);
+        ids = JSON.parse(decodeURIComponent(encodedIds));
+      } catch (e) {
+        return;
+      }
+      if (!Array.isArray(ids) || ids.length === 0) return;
+
+      if (!confirm(`Tandai ${ids.length} catatan talangan milik "${personName}" sebagai Sudah Diganti?`)) {
+        return;
+      }
+
+      const updates = {};
+      ids.forEach(idKey => {
+        updates[`ugd_referrals/${String(idKey)}/advanceStatus`] = 'Sudah Diganti';
+      });
+
+      db.ref().update(updates)
+        .catch(err => alert('Gagal mencairkan talangan: ' + err.message));
+    }
+
+    function printRecapPerPerson() {
+      const roleFilter = document.getElementById('recapRoleFilter')?.value || 'ALL';
+      const rows = buildPersonRecapRows(latestFilteredRecords).filter(item => {
+        if (roleFilter === 'ALL') return true;
+        return item.role === roleFilter;
+      });
+
+      if (rows.length === 0) {
+        alert('Tidak ada data rekap untuk dicetak!');
+        return;
+      }
+
+      const startVal = (document.getElementById('startDate')?.value || '').trim();
+      const endVal = (document.getElementById('endDate')?.value || '').trim();
+      const periodText = (startVal || endVal) ? `${startVal || 'Awal'} s/d ${endVal || 'Akhir'}` : 'Semua Periode';
+
+      let totalPending = 0;
+      let totalPaid = 0;
+      const bodyRowsHtml = rows.map((item, idx) => {
+        totalPending += item.pendingSum;
+        totalPaid += item.paidSum;
+        return `
+          <tr class="border-b">
+            <td class="py-1.5 px-2">${idx + 1}</td>
+            <td class="py-1.5 px-2 font-semibold">${item.name}</td>
+            <td class="py-1.5 px-2">${item.role}</td>
+            <td class="py-1.5 px-2 text-center">${item.tripCount}</td>
+            <td class="py-1.5 px-2 text-right">${formatRupiah(item.pendingSum)}</td>
+            <td class="py-1.5 px-2 text-right">${formatRupiah(item.paidSum)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('printAreaSubtitle').innerText = `REKAP PENCAIRAN DANA TALANGAN PER PETUGAS & DRIVER (${roleFilter} • ${periodText})`;
+      document.getElementById('printContent').innerHTML = `
+        <div class="text-xs text-slate-600 mb-3">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+        <table class="w-full text-xs border-collapse border border-slate-300">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="border border-slate-300 py-1.5 px-2 text-left">No</th>
+              <th class="border border-slate-300 py-1.5 px-2 text-left">Nama</th>
+              <th class="border border-slate-300 py-1.5 px-2 text-left">Peran</th>
+              <th class="border border-slate-300 py-1.5 px-2 text-center">Trip</th>
+              <th class="border border-slate-300 py-1.5 px-2 text-right">Belum Diganti</th>
+              <th class="border border-slate-300 py-1.5 px-2 text-right">Sudah Diganti</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRowsHtml}</tbody>
+          <tfoot class="bg-slate-50 font-bold">
+            <tr>
+              <td colspan="4" class="border border-slate-300 py-1.5 px-2 text-right">Total</td>
+              <td class="border border-slate-300 py-1.5 px-2 text-right">${formatRupiah(totalPending)}</td>
+              <td class="border border-slate-300 py-1.5 px-2 text-right">${formatRupiah(totalPaid)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      `;
+
+      document.getElementById('printLeftSignTitle').innerText = 'Pengelola Dana Talangan,';
+      document.getElementById('printSignStaff').innerText = '( .................................... )';
+      document.getElementById('printRightSignTitle').innerText = 'Koordinator UGD / Admin,';
+
+      const printArea = document.getElementById('printArea');
+      printArea.classList.remove('hidden');
+
+      setTimeout(() => {
+        window.print();
+        printArea.classList.add('hidden');
+        document.getElementById('printAreaSubtitle').innerText = 'LEMBAR PRESENSI RUJUKAN & RINCIAN DANA TALANGAN';
+        document.getElementById('printLeftSignTitle').innerText = 'Pendamping / Driver,';
+        document.getElementById('printRightSignTitle').innerText = 'Petugas UGD / Admin,';
+      }, 300);
+    }
+
+    function resetForm() {
+      document.getElementById('referralForm').reset();
+      initClock();
+      renderStaffList();
+      renderRoleAdaptiveSection('Perawat', [], '');
+      renderHospitalDropdown();
+      toggleAdvanceInput(true);
+    }
+
+    function deleteRecord(event, idKey) {
+      if (event) event.stopPropagation();
+      const cleanId = String(idKey);
+      const record = referralRecords.find(r => String(r.idKey) === cleanId);
+      pendingDeleteIdKey = cleanId;
+
+      const fuelVal = record ? (Number(record.fuelAmount) || 0) : 0;
+      const mealVal = record ? (Number(record.mealAmount) || 0) : 0;
+      const totalAdvVal = record ? (Number(record.advanceAmount) || (fuelVal + mealVal)) : 0;
+
+      document.getElementById('delSummaryPatient').innerText = (record && record.patientName) || '-';
+      document.getElementById('delSummaryHospital').innerText = (record && record.hospital) || '-';
+      document.getElementById('delSummaryDate').innerText = record ? formatSafeDate(record.datetime, true) : '-';
+      document.getElementById('delSummaryAdvance').innerText = totalAdvVal > 0 ? formatRupiah(totalAdvVal) : 'Tidak Ada';
+
+      const confirmBtn = document.getElementById('btnConfirmDelete');
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Ya, Hapus`;
+
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      pendingDeleteIdKey = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    function confirmDeleteRecord() {
+      if (!pendingDeleteIdKey) return;
+      const cleanId = String(pendingDeleteIdKey);
+      const confirmBtn = document.getElementById('btnConfirmDelete');
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...`;
+
+      db.ref('ugd_referrals/' + cleanId).remove()
+        .then(() => {
+          closeDeleteModal();
+        })
+        .catch(err => {
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Ya, Hapus`;
+          alert('Gagal menghapus: ' + err.message);
+        });
+    }
+
+    function applySearchFilter() {
+      const searchEl = document.getElementById('searchInput');
+      const resetBtn = document.getElementById('btnResetSearch');
+      activeSearchQuery = searchEl ? String(searchEl.value || '').toLowerCase().trim() : '';
+      if (resetBtn) {
+        if (activeSearchQuery) {
+          resetBtn.classList.remove('hidden');
+        } else {
+          resetBtn.classList.add('hidden');
+        }
+      }
+      renderTable();
+    }
+
+    function clearSearchFilter() {
+      const searchEl = document.getElementById('searchInput');
+      const resetBtn = document.getElementById('btnResetSearch');
+      if (searchEl) searchEl.value = '';
+      activeSearchQuery = '';
+      if (resetBtn) resetBtn.classList.add('hidden');
+      renderTable();
+    }
+
+    function clearDateFilter() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      renderTable();
+    }
+
+    function formatRupiah(amount) {
+      return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(amount) || 0);
+    }
+
+    function formatSafeDate(dtStr, withYear = false) {
+      if (!dtStr) return '-';
+      const dateObj = new Date(dtStr);
+      if (isNaN(dateObj.getTime())) return String(dtStr);
+      const options = withYear
+        ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+        : { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
+      return dateObj.toLocaleDateString('id-ID', options);
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('dataTable');
+      if (!tbody) return;
+
+      const filterRoleEl = document.getElementById('filterRole');
+      const filterInsEl = document.getElementById('filterInsurance');
+      const filterAdvEl = document.getElementById('filterAdvanceStatus');
+      const startDateEl = document.getElementById('startDate');
+      const endDateEl = document.getElementById('endDate');
+
+      const search = activeSearchQuery;
+      const filterRole = filterRoleEl ? (filterRoleEl.value || 'ALL') : 'ALL';
+      const filterIns = filterInsEl ? (filterInsEl.value || 'ALL') : 'ALL';
+      const filterAdv = filterAdvEl ? (filterAdvEl.value || 'ALL') : 'ALL';
+      const startDateVal = startDateEl ? String(startDateEl.value || '').trim() : '';
+      const endDateVal = endDateEl ? String(endDateEl.value || '').trim() : '';
+
+      const sourceList = Array.isArray(referralRecords) ? referralRecords : [];
+
+      const filtered = sourceList.filter(r => {
+        if (!r || typeof r !== 'object') return false;
+
+        const px = String(r.patientName || '').toLowerCase();
+        const rs = String(r.hospital || '').toLowerCase();
+        const st = String(r.staff || '').toLowerCase();
+        const dr = String(r.driver || '').toLowerCase();
+        const clin = String(r.roleClinicalNote || '').toLowerCase();
+
+        const matchSearch = !search || px.includes(search) || rs.includes(search) || st.includes(search) || dr.includes(search) || clin.includes(search);
+        const recRole = ['Perawat', 'Bidan', 'Lainnya'].includes(r.role) ? r.role : 'Perawat';
+        const matchRole = filterRole === 'ALL' || recRole === filterRole;
+        const matchIns = filterIns === 'ALL' || String(r.insurance || '') === filterIns;
+        const statusVal = r.advanceStatus ? String(r.advanceStatus) : 'Belum Diganti';
+        const matchAdv = filterAdv === 'ALL' || statusVal === filterAdv;
+
+        let matchDate = true;
+        if (startDateVal || endDateVal) {
+          const recDate = r.datetime ? String(r.datetime).slice(0, 10) : '';
+          if (!recDate) {
+            matchDate = false;
+          } else {
+            if (startDateVal && recDate < startDateVal) matchDate = false;
+            if (endDateVal && recDate > endDateVal) matchDate = false;
+          }
+        }
+
+        return matchSearch && matchRole && matchIns && matchAdv && matchDate;
+      });
+
+      latestFilteredRecords = filtered;
+
+      let totalCount = 0;
+      let bpjsCount = 0;
+      let puskesmasVehCount = 0;
+      let totalAdvancePending = 0;
+      let totalAdvancePaid = 0;
+
+      filtered.forEach(r => {
+        totalCount++;
+        if (r.insurance === 'BPJS') bpjsCount++;
+        if (r.vehicle === 'Ambulan Puskesmas') puskesmasVehCount++;
+
+        const calculatedTotal = (Number(r.fuelAmount) || 0) + (Number(r.mealAmount) || 0);
+        const advanceSum = Number(r.advanceAmount) || calculatedTotal;
+
+        if (r.hasAdvance || advanceSum > 0) {
+          if (r.advanceStatus === 'Sudah Diganti') {
+            totalAdvancePaid += advanceSum;
+          } else {
+            totalAdvancePending += advanceSum;
+          }
+        }
+      });
+
+      document.getElementById('statTotal').innerText = totalCount;
+      document.getElementById('statBpjs').innerText = bpjsCount;
+      document.getElementById('statAdvancePending').innerText = formatRupiah(totalAdvancePending);
+      document.getElementById('statAdvancePaid').innerText = formatRupiah(totalAdvancePaid);
+      document.getElementById('statPuskesmas').innerText = puskesmasVehCount;
+
+      if (activeHistoryView === 'recap') {
+        renderRecapPerPerson();
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400">Belum ada data catatan rujukan.</td></tr>`;
+        return;
+      }
+
+      const rowsHtml = filtered.map(r => {
+        const safeKey = String(r.idKey);
+        const formattedDate = formatSafeDate(r.datetime, false);
+        const fuelVal = Number(r.fuelAmount) || 0;
+        const mealVal = Number(r.mealAmount) || 0;
+        const totalAdvVal = Number(r.advanceAmount) || (fuelVal + mealVal);
+        const hasAdvItem = Boolean(r.hasAdvance) || totalAdvVal > 0;
+        const currentAdvStatus = r.advanceStatus === 'Sudah Diganti' ? 'Sudah Diganti' : 'Belum Diganti';
+        const recRole = ['Perawat', 'Bidan', 'Lainnya'].includes(r.role) ? r.role : 'Perawat';
+        const roleTag = renderRoleBadge(recRole);
+        const checkCount = Array.isArray(r.roleChecklist) ? r.roleChecklist.length : 0;
+        const clinicalLine = r.roleClinicalNote
+          ? `<div class="text-[10px] text-slate-600 mt-0.5 italic">"${r.roleClinicalNote}"</div>`
+          : '';
+        const checkLine = checkCount > 0
+          ? `<div class="text-[10px] text-emerald-700 font-medium mt-0.5"><i class="fa-solid fa-square-check mr-1"></i>${checkCount} poin siap</div>`
+          : '';
+
+        const insBadge = r.insurance === 'BPJS' 
+          ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2.5 py-1 rounded-full font-bold">BPJS</span>`
+          : `<span class="bg-slate-100 text-slate-700 text-[10px] px-2.5 py-1 rounded-full font-bold">Umum</span>`;
+
+        let advBadge = `<span class="text-slate-400 text-[10px]">Tidak Ada</span>`;
+        if (hasAdvItem) {
+          const statusText = currentAdvStatus === 'Sudah Diganti' ? '✓ Sudah Diganti' : '⏳ Belum Diganti';
+          const badgeColor = currentAdvStatus === 'Sudah Diganti' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+          
+          advBadge = `
+            <div class="${badgeColor} text-[10px] px-2.5 py-1.5 rounded-xl font-bold space-y-0.5">
+              <div>Total: ${formatRupiah(totalAdvVal)}</div>
+              <div class="text-[9px] text-slate-600 font-normal">Minyak: ${formatRupiah(fuelVal)}</div>
+              <div class="text-[9px] text-slate-600 font-normal">Makan: ${formatRupiah(mealVal)}</div>
+              <button type="button" class="cursor-pointer underline text-indigo-700 pt-0.5 text-left block" onclick="toggleAdvanceStatus(event, '${safeKey}', '${currentAdvStatus}')">${statusText}</button>
+            </div>
+          `;
+        }
+
+        return `
+          <tr class="hover:bg-slate-50 border-b">
+            <td class="py-3 px-3 font-medium text-slate-700 whitespace-nowrap">${formattedDate}</td>
+            <td class="py-3 px-3 font-bold text-slate-900">${r.patientName || '-'}</td>
+            <td class="py-3 px-3">${insBadge}</td>
+            <td class="py-3 px-3 font-medium text-emerald-700">${r.hospital || '-'}</td>
+            <td class="py-3 px-3 font-semibold text-slate-700">${formatRupiah(r.claimAmount || 0)}</td>
+            <td class="py-3 px-3">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${roleTag}
+                <span class="font-semibold text-slate-800">${r.staff || '-'}</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5"><i class="fa-solid fa-id-card mr-1 text-xs"></i> Driver: ${r.driver || '-'}</div>
+              ${checkLine}
+              ${clinicalLine}
+            </td>
+            <td class="py-3 px-3">${advBadge}</td>
+            <td class="py-3 px-3 text-center">
+              ${hasAdvItem ? `<button type="button" onclick="toggleAdvanceStatus(event, '${safeKey}', '${currentAdvStatus}')" class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold ${currentAdvStatus === 'Sudah Diganti' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'} transition"><i class="fa-solid fa-rotate mr-1"></i> ${currentAdvStatus}</button>` : '-'}
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <button type="button" onclick="openEditModal(event, '${safeKey}')" class="text-amber-600 hover:text-amber-800 mr-1.5 p-1.5 bg-amber-50 rounded-lg" title="Edit Data"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button type="button" onclick="sendWhatsApp(event, '${safeKey}')" class="text-emerald-600 hover:text-emerald-800 mr-1.5 p-1.5 bg-emerald-50 rounded-lg" title="Kirim WA"><i class="fa-brands fa-whatsapp font-bold text-sm"></i></button>
+              <button type="button" onclick="printSlip(event, '${safeKey}')" class="text-blue-600 hover:text-blue-800 mr-1.5 p-1.5 bg-blue-50 rounded-lg" title="Cetak Resi"><i class="fa-solid fa-print"></i></button>
+              <button type="button" onclick="deleteRecord(event, '${safeKey}')" class="text-rose-600 hover:text-rose-800 p-1.5 bg-rose-50 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.innerHTML = rowsHtml;
+    }
+
+    function sendWhatsApp(event, idKey) {
+      if (event) event.stopPropagation();
+      const record = referralRecords.find(r => String(r.idKey) === String(idKey));
+      if (!record) return;
+
+      const formattedDate = formatSafeDate(record.datetime, true);
+      const fuelVal = Number(record.fuelAmount) || 0;
+      const mealVal = Number(record.mealAmount) || 0;
+      const totalAdvVal = Number(record.advanceAmount) || (fuelVal + mealVal);
+      const hasAdvItem = Boolean(record.hasAdvance) || totalAdvVal > 0;
+      const currentAdvStatus = record.advanceStatus || 'Belum Diganti';
+      const checklistText = Array.isArray(record.roleChecklist) && record.roleChecklist.length > 0
+        ? record.roleChecklist.join('; ')
+        : '-';
+      const clinicalText = record.roleClinicalNote ? record.roleClinicalNote : '-';
+
+      const textMessage = `*LAPORAN RUJUKAN & DANA TALANGAN UGD*%0A` +
+        `----------------------------------------%0A` +
+        `*Waktu:* ${formattedDate}%0A` +
+        `*Nama Pasien:* ${record.patientName || '-'}%0A` +
+        `*Penjamin:* ${record.insurance || '-'}%0A` +
+        `*Transportasi:* ${record.vehicle || '-'}%0A` +
+        `*Tujuan:* ${record.hospital || '-'}%0A` +
+        `*Rencana Klaim RS:* ${formatRupiah(record.claimAmount || 0)}%0A` +
+        `*Pendamping (${record.role || 'Perawat'}):* ${record.staff || '-'}%0A` +
+        `*Checklist Peran:* ${checklistText}%0A` +
+        `*Catatan Klinis:* ${clinicalText}%0A` +
+        `*Driver:* ${record.driver || '-'}%0A` +
+        `*Dana Talangan:* ${hasAdvItem ? formatRupiah(totalAdvVal) + ' (Minyak: ' + formatRupiah(fuelVal) + ', Makan: ' + formatRupiah(mealVal) + ') [' + currentAdvStatus + ']' : 'Tidak Ada'}%0A` +
+        `*Catatan:* ${record.notes || '-'}`;
+
+      window.open(`https://api.whatsapp.com/send?text=${textMessage}`, '_blank');
+    }
+
+    function printSlip(event, idKey) {
+      if (event) event.stopPropagation();
+      const record = referralRecords.find(r => String(r.idKey) === String(idKey));
+      if (!record) {
+        alert('Data rujukan tidak ditemukan!');
+        return;
+      }
+
+      const printContent = document.getElementById('printContent');
+      const formattedDate = formatSafeDate(record.datetime, true);
+      const fuelVal = Number(record.fuelAmount) || 0;
+      const mealVal = Number(record.mealAmount) || 0;
+      const totalAdvVal = Number(record.advanceAmount) || (fuelVal + mealVal);
+      const hasAdvItem = Boolean(record.hasAdvance) || totalAdvVal > 0;
+      const currentAdvStatus = record.advanceStatus || 'Belum Diganti';
+      const checklistText = Array.isArray(record.roleChecklist) && record.roleChecklist.length > 0
+        ? record.roleChecklist.join('; ')
+        : '-';
+      const clinicalText = record.roleClinicalNote || '-';
+
+      printContent.innerHTML = `
+        <div class="grid grid-cols-3"><strong>Waktu Rujukan</strong> <span class="col-span-2">: ${formattedDate}</span></div>
+        <div class="grid grid-cols-3"><strong>Nama Pasien</strong> <span class="col-span-2">: ${record.patientName || '-'}</span></div>
+        <div class="grid grid-cols-3"><strong>Jenis Penjamin</strong> <span class="col-span-2">: ${record.insurance || '-'}</span></div>
+        <div class="grid grid-cols-3"><strong>Transportasi / Mobil</strong> <span class="col-span-2">: ${record.vehicle || '-'}</span></div>
+        <div class="grid grid-cols-3"><strong>Tujuan Rujukan</strong> <span class="col-span-2">: ${record.hospital || '-'}</span></div>
+        <div class="grid grid-cols-3"><strong>Rencana Klaim RS</strong> <span class="col-span-2">: ${formatRupiah(record.claimAmount || 0)}</span></div>
+        <div class="grid grid-cols-3"><strong>Pendamping (${record.role || 'Nakes'})</strong> <span class="col-span-2">: ${record.staff || '-'}</span></div>
+        <div class="grid grid-cols-3"><strong>Checklist Peran</strong> <span class="col-span-2">: ${checklistText}</span></div>
+        <div class="grid grid-cols-3"><strong>Catatan Klinis</strong> <span class="col-span-2">: ${clinicalText}</span></div>
+        <div class="grid grid-cols-3"><strong>Driver / Pengemudi</strong> <span class="col-span-2">: ${record.driver || '-'}</span></div>
+        <div class="grid grid-cols-3"><strong>Dana Talangan</strong> <span class="col-span-2">: ${hasAdvItem ? formatRupiah(totalAdvVal) + ' (BBM: ' + formatRupiah(fuelVal) + ' | Makan: ' + formatRupiah(mealVal) + ') [Status: ' + currentAdvStatus + ']' : 'Tidak Ada'}</span></div>
+        <div class="grid grid-cols-3"><strong>Catatan Klaim</strong> <span class="col-span-2">: ${record.notes || '-'}</span></div>
+      `;
+
+      document.getElementById('printSignStaff').innerText = (record.staff && record.staff.split(',')[0]) || record.driver || 'Petugas';
+
+      const printArea = document.getElementById('printArea');
+      printArea.classList.remove('hidden');
+
+      setTimeout(() => {
+        window.print();
+        printArea.classList.add('hidden');
+      }, 300);
+    }
+
+    function exportToCSV() {
+      if (referralRecords.length === 0) {
+        alert('Tidak ada data untuk diexport!');
+        return;
+      }
+
+      let csv = 'Tanggal & Waktu,Nama Pasien,Penjamin,Transportasi,Rujukan Ke,Rencana Klaim RS (Rp),Peran,Pendamping,Checklist Peran,Catatan Klinis,Driver,BBM (Rp),Uang Makan (Rp),Total Talangan (Rp),Status Talangan,Catatan\n';
+      referralRecords.forEach(r => {
+        const fuelVal = Number(r.fuelAmount) || 0;
+        const mealVal = Number(r.mealAmount) || 0;
+        const totalAdvVal = Number(r.advanceAmount) || (fuelVal + mealVal);
+        const chk = Array.isArray(r.roleChecklist) ? r.roleChecklist.join('; ') : '';
+        const clin = r.roleClinicalNote || '';
+        csv += `"${r.datetime || ''}","${r.patientName || ''}","${r.insurance || ''}","${r.vehicle || ''}","${r.hospital || ''}","${r.claimAmount || 0}","${r.role || 'Perawat'}","${r.staff || ''}","${chk}","${clin}","${r.driver || ''}","${fuelVal}","${mealVal}","${totalAdvVal}","${r.advanceStatus || 'Tidak Ada'}","${r.notes || '-'}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', `Presensi_Talangan_Rinci_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+      loadSettingsDataToModal();
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function switchSettingsTab(tab) {
+      ['Staff', 'Hospital', 'Security', 'Firebase', 'About'].forEach(t => {
+        document.getElementById('tabContent' + t).classList.add('hidden');
+        document.getElementById('tabBtn' + t).className = 'pb-2 px-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 whitespace-nowrap';
+      });
+      document.getElementById('tabContent' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+      document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).className = 'pb-2 px-3 border-b-2 border-emerald-600 text-emerald-700 font-bold whitespace-nowrap';
+    }
+
+    function loadSettingsDataToModal() {
+      renderSettingsStaffLists();
+      renderSettingsHospitalLists();
+      document.getElementById('headerAppVersion').innerText = APP_VERSION;
+      document.getElementById('modalAppVersion').innerText = APP_VERSION;
+    }
+
+    function renderSettingsStaffLists() {
+      const nurseCont = document.getElementById('nurseListContainer');
+      const midwifeCont = document.getElementById('midwifeListContainer');
+      nurseCont.innerHTML = '';
+      midwifeCont.innerHTML = '';
+
+      masterStaff.Perawat.forEach((name, idx) => {
+        nurseCont.innerHTML += `<div class="flex justify-between items-center bg-white p-1.5 rounded-lg border-b"><span>${name}</span> <button type="button" onclick="removeStaffMember('Perawat', ${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
+      });
+
+      masterStaff.Bidan.forEach((name, idx) => {
+        midwifeCont.innerHTML += `<div class="flex justify-between items-center bg-white p-1.5 rounded-lg border-b"><span>${name}</span> <button type="button" onclick="removeStaffMember('Bidan', ${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
+      });
+    }
+
+    function renderSettingsHospitalLists() {
+      const hospCont = document.getElementById('hospitalListContainer');
+      hospCont.innerHTML = '';
+      masterHospitals.forEach((h, idx) => {
+        hospCont.innerHTML += `<div class="flex justify-between items-center bg-white p-2 rounded-xl border-b"><span><b>${h.name}</b> (Klaim: Rp ${Number(h.claim).toLocaleString('id-ID')})</span> <button type="button" onclick="removeHospital(${idx})" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button></div>`;
+      });
+    }
+
+    function addStaffMember(role) {
+      const inputId = role === 'Perawat' ? 'newNurseInput' : 'newMidwifeInput';
+      const val = document.getElementById(inputId).value.trim();
+      if (!val) return;
+
+      masterStaff[role].push(val);
+      localStorage.setItem('ugd_master_staff', JSON.stringify(masterStaff));
+      document.getElementById(inputId).value = '';
+      renderSettingsStaffLists();
+      renderStaffList();
+    }
+
+    function removeStaffMember(role, index) {
+      if (confirm('Hapus nama petugas ini dari daftar?')) {
+        masterStaff[role].splice(index, 1);
+        localStorage.setItem('ugd_master_staff', JSON.stringify(masterStaff));
+        renderSettingsStaffLists();
+        renderStaffList();
+      }
+    }
+
+    function addHospital() {
+      const nameVal = document.getElementById('newHospitalName').value.trim();
+      const claimVal = parseFloat(document.getElementById('newHospitalClaim').value) || 0;
+      if (!nameVal) {
+        alert('Nama RS tidak boleh kosong!');
+        return;
+      }
+
+      masterHospitals.push({ name: nameVal, claim: claimVal });
+      localStorage.setItem('ugd_master_hospitals', JSON.stringify(masterHospitals));
+      
+      document.getElementById('newHospitalName').value = '';
+      document.getElementById('newHospitalClaim').value = '';
+      
+      renderSettingsHospitalLists();
+      renderHospitalDropdown();
+    }
+
+    function removeHospital(index) {
+      if (confirm('Hapus Rumah Sakit ini dari daftar?')) {
+        masterHospitals.splice(index, 1);
+        localStorage.setItem('ugd_master_hospitals', JSON.stringify(masterHospitals));
+        renderSettingsHospitalLists();
+        renderHospitalDropdown();
+      }
+    }
+
+    function backupAllDataJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(referralRecords, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `Backup_Rujukan_UGD_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      document.body.removeChild(dlAnchor);
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const editM = document.getElementById('editModal');
+        if (editM && !editM.classList.contains('hidden')) {
+          closeEditModal();
+          return;
+        }
+        const delModal = document.getElementById('deleteModal');
+        if (delModal && !delModal.classList.contains('hidden')) {
+          closeDeleteModal();
+        }
+      }
+    });
+
+    window.onload = function() {
+      const searchEl = document.getElementById('searchInput');
+      if (searchEl) searchEl.value = '';
+      activeSearchQuery = '';
+      initClock();
+      renderStaffList();
+      renderRoleAdaptiveSection('Perawat', [], '');
+      renderHospitalDropdown();
+      initFirebaseSync();
+    };
+  </script>
+</body>
+</html>
