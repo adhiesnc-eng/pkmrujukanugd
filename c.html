@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Presensi Rujukan & Jaga Shift UGD Puskesmas (v1.5.1 - rujukan-a25d0)</title>
+  <title>Presensi Rujukan & Jaga Shift UGD Puskesmas (v1.5.2 - rujukan-a25d0)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
@@ -88,7 +88,7 @@
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-xl font-bold leading-tight">Presensi & Talangan UGD</h1>
-            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.5.1</span>
+            <span id="headerAppVersion" class="bg-emerald-800 text-emerald-200 text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">v1.5.2</span>
           </div>
           <p class="text-xs text-emerald-100">UPTD Puskesmas Sampanahan • Cloud Sync</p>
         </div>
@@ -639,6 +639,129 @@
   </main>
 
   <!-- ========================================== -->
+  <!-- MODAL POPUP: EDIT / KOREKSI JAGA SHIFT     -->
+  <!-- ========================================== -->
+  <div id="editShiftModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" onclick="if(event.target === this) closeEditShiftModal()">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto p-6 space-y-5 border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center text-base">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800 leading-tight">Edit Catatan Jaga Shift</h3>
+            <p class="text-[11px] text-slate-500">Perbarui jadwal shift, tim petugas jaga, driver, atau operan tugas</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeEditShiftModal()" class="text-slate-400 hover:text-slate-600 text-lg w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="editShiftForm" onsubmit="updateShiftInFirebase(event)" class="space-y-4">
+        <input type="hidden" id="editShiftIdKey">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Jaga</label>
+            <input type="date" id="editShiftDate" required class="w-full px-3 py-2 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Shift (Pagi / Siang / Malam)</label>
+            <select id="editShiftPeriod" class="w-full px-3 py-2 border rounded-xl text-xs bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <option value="Pagi">Pagi (07.00 - 14.00)</option>
+              <option value="Siang">Siang (14.00 - 21.00)</option>
+              <option value="Malam">Malam (21.00 - 07.00)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Petugas Utama</label>
+            <div class="flex items-center space-x-4 pt-1.5 text-xs">
+              <label class="inline-flex items-center cursor-pointer font-medium">
+                <input type="radio" name="editShiftRole" value="Perawat" onchange="onEditShiftRoleChanged()" class="text-emerald-600">
+                <span class="ml-1">Perawat</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer font-medium">
+                <input type="radio" name="editShiftRole" value="Bidan" onchange="onEditShiftRoleChanged()" class="text-emerald-600">
+                <span class="ml-1">Bidan</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Driver Standby</label>
+            <input type="text" id="editShiftDriver" placeholder="Contoh: Bpk. Junaidi" class="w-full px-3 py-2 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Petugas Jaga Shift (Bisa pilih lebih dari 1)</label>
+          <div id="editShiftStaffChecklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 max-h-36 overflow-y-auto text-xs">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Serah Terima / Operan Shift</label>
+          <input type="text" id="editShiftHandoverNote" placeholder="Contoh: Pasien observasi 1 org, oksigen & ambulans siap" class="w-full px-3 py-2 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="closeEditShiftModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+          <button type="submit" id="btnSaveEditShift" class="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 shadow-sm transition flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL POPUP: KONFIRMASI HAPUS JAGA SHIFT   -->
+  <!-- ========================================== -->
+  <div id="deleteShiftModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" onclick="if(event.target === this) closeDeleteShiftModal()">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5 text-center border border-slate-100">
+      <div class="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-inner">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-800">Hapus Catatan Jaga Shift?</h3>
+        <p class="text-xs text-slate-500 mt-1">Catatan shift ini akan dihapus dari Cloud dan rekap jumlah shift akan menyesuaikan.</p>
+      </div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-left text-xs space-y-1.5">
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Tanggal:</span>
+          <span id="delShiftSummaryDate" class="font-bold text-slate-800 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Shift:</span>
+          <span id="delShiftSummaryPeriod" class="font-semibold text-emerald-700 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2">
+          <span class="text-slate-500">Petugas:</span>
+          <span id="delShiftSummaryStaff" class="text-slate-700 text-right">-</span>
+        </div>
+        <div class="flex justify-between gap-2 pt-1 border-t border-slate-200">
+          <span class="text-slate-500">Driver:</span>
+          <span id="delShiftSummaryDriver" class="font-semibold text-slate-700 text-right">-</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="closeDeleteShiftModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition">Batal</button>
+        <button type="button" id="btnConfirmDeleteShift" onclick="confirmDeleteShiftRecord()" class="w-full py-2.5 bg-rose-600 text-white rounded-xl text-xs font-semibold hover:bg-rose-700 shadow-md transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-trash"></i> Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- MODAL POPUP: EDIT / KOREKSI DATA RUJUKAN    -->
   <!-- ========================================== -->
   <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4" onclick="if(event.target === this) closeEditModal()">
@@ -966,7 +1089,7 @@
           <h4 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
             <i class="fa-solid fa-circle-info"></i> Informasi Versi Aplikasi
           </h4>
-          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.5.1</b></p>
+          <p>Versi Saat Ini: <b id="modalAppVersion" class="font-mono text-emerald-800">v1.5.2</b></p>
           <p class="text-slate-600">Aplikasi Presensi Rujukan, Jaga Shift & Dana Talangan UGD UPTD Puskesmas Sampanahan.</p>
         </div>
         <button type="button" onclick="backupAllDataJSON()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-blue-700 transition"><i class="fa-solid fa-download mr-1"></i> Download Backup Data JSON</button>
@@ -1018,7 +1141,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const APP_VERSION = "v1.5.1";
+    const APP_VERSION = "v1.5.2";
     const PENDING_QUEUE_STORAGE_KEY = 'ugd_pending_sync_queue_v1';
 
     const ROLE_CHECKLIST_OPTIONS = {
@@ -1058,11 +1181,12 @@
     let activeHistoryView = 'table';
     let activeShiftSubView = 'log';
     let pendingDeleteIdKey = null;
+    let pendingDeleteShiftIdKey = null;
     let appSettingsPin = localStorage.getItem('ugd_settings_pin') || '1234';
     let isFirebaseConnected = false;
     let isFlushingQueue = false;
 
-    // Penanda highlight singkat saat simpan / cairkan talangan / simpan shift (#3)
+    // Penanda highlight singkat saat simpan / cairkan talangan / simpan shift
     let highlightedRecordKeys = new Set();
     let highlightedRecapKeys = new Set();
     let highlightedShiftKeys = new Set();
@@ -1491,7 +1615,7 @@
     }
 
     // ==========================================
-    // FITUR JAGA SHIFT (PAGI, SIANG, MALAM)
+    // FITUR JAGA SHIFT (PAGI, SIANG, MALAM) + EDIT & HAPUS
     // ==========================================
     function onShiftPeriodChanged() {
       const el = document.getElementById('shiftPeriod');
@@ -1578,13 +1702,153 @@
         });
     }
 
+    function renderEditShiftStaffChecklist(preselectedStaffStr = '') {
+      const roleEl = document.querySelector('input[name="editShiftRole"]:checked');
+      const selectedRole = roleEl ? roleEl.value : 'Perawat';
+      const container = document.getElementById('editShiftStaffChecklist');
+      if (!container) return;
+
+      const selectedNames = String(preselectedStaffStr || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const names = masterStaff[selectedRole] || [];
+      container.innerHTML = names.map(name => {
+        const checked = selectedNames.includes(name) ? 'checked' : '';
+        return `
+          <label class="flex items-center space-x-1.5 cursor-pointer text-slate-700 hover:text-emerald-700 bg-white p-1.5 rounded-lg border border-slate-100">
+            <input type="checkbox" name="editShiftStaffNames" value="${name}" ${checked} class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+            <span class="truncate">${name}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function onEditShiftRoleChanged() {
+      const currentChecked = Array.from(document.querySelectorAll('input[name="editShiftStaffNames"]:checked')).map(cb => cb.value);
+      renderEditShiftStaffChecklist(currentChecked.join(', '));
+    }
+
+    function openEditShiftModal(idKey) {
+      const cleanId = String(idKey);
+      const item = shiftRecords.find(s => String(s.idKey) === cleanId);
+      if (!item) {
+        alert('Catatan jaga shift tidak ditemukan!');
+        return;
+      }
+
+      document.getElementById('editShiftIdKey').value = cleanId;
+      document.getElementById('editShiftDate').value = item.date || '';
+      document.getElementById('editShiftPeriod').value = ['Pagi', 'Siang', 'Malam'].includes(item.shift) ? item.shift : 'Pagi';
+
+      const roleVal = item.role === 'Bidan' ? 'Bidan' : 'Perawat';
+      const roleRadio = document.querySelector(`input[name="editShiftRole"][value="${roleVal}"]`);
+      if (roleRadio) roleRadio.checked = true;
+
+      renderEditShiftStaffChecklist(item.staff || '');
+      document.getElementById('editShiftDriver').value = (item.driver && item.driver !== '-') ? item.driver : '';
+      document.getElementById('editShiftHandoverNote').value = (item.handoverNote && item.handoverNote !== '-') ? item.handoverNote : '';
+
+      const saveBtn = document.getElementById('btnSaveEditShift');
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan`;
+
+      document.getElementById('editShiftModal').classList.remove('hidden');
+    }
+
+    function closeEditShiftModal() {
+      document.getElementById('editShiftModal').classList.add('hidden');
+    }
+
+    function updateShiftInFirebase(e) {
+      e.preventDefault();
+
+      const cleanId = String(document.getElementById('editShiftIdKey').value || '').trim();
+      if (!cleanId) return;
+
+      const shiftDate = document.getElementById('editShiftDate').value;
+      const shiftPeriod = document.getElementById('editShiftPeriod').value || 'Pagi';
+      const shiftRole = document.querySelector('input[name="editShiftRole"]:checked')?.value || 'Perawat';
+      const checkedStaff = Array.from(document.querySelectorAll('input[name="editShiftStaffNames"]:checked')).map(cb => cb.value);
+
+      if (checkedStaff.length === 0) {
+        alert('Harap pilih minimal 1 petugas jaga untuk shift ini!');
+        return;
+      }
+
+      const shiftDriver = document.getElementById('editShiftDriver').value.trim() || '-';
+      const handoverNote = document.getElementById('editShiftHandoverNote').value.trim() || '-';
+
+      const updatedPayload = {
+        date: shiftDate,
+        shift: shiftPeriod,
+        role: shiftRole,
+        staff: checkedStaff.join(', '),
+        driver: shiftDriver,
+        handoverNote: handoverNote,
+        updatedAt: Date.now()
+      };
+
+      const saveBtn = document.getElementById('btnSaveEditShift');
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+      updateSyncStatusBadge('syncing', 'Memperbarui shift...');
+
+      db.ref('ugd_shifts/' + cleanId).update(updatedPayload)
+        .then(() => {
+          triggerHighlightFeedback([], [], false, [cleanId]);
+          closeEditShiftModal();
+          updateLastSyncStamp();
+          updateSyncStatusBadge('connected', 'Terhubung Cloud');
+        })
+        .catch(() => {
+          enqueueSyncOperation({ type: 'update', path: 'ugd_shifts/' + cleanId, data: updatedPayload });
+          triggerHighlightFeedback([], [], false, [cleanId]);
+          closeEditShiftModal();
+          updateSyncStatusBadge('offline', 'Tersimpan di Antrean');
+        });
+    }
+
     function deleteShiftRecord(idKey) {
       const cleanId = String(idKey);
-      if (!confirm('Hapus catatan jaga shift ini dari Cloud?')) return;
+      const item = shiftRecords.find(s => String(s.idKey) === cleanId);
+      pendingDeleteShiftIdKey = cleanId;
+
+      document.getElementById('delShiftSummaryDate').innerText = (item && item.date) || '-';
+      document.getElementById('delShiftSummaryPeriod').innerText = (item && item.shift) || '-';
+      document.getElementById('delShiftSummaryStaff').innerText = (item && item.staff) || '-';
+      document.getElementById('delShiftSummaryDriver').innerText = (item && item.driver) || '-';
+
+      const confirmBtn = document.getElementById('btnConfirmDeleteShift');
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Ya, Hapus`;
+
+      document.getElementById('deleteShiftModal').classList.remove('hidden');
+    }
+
+    function closeDeleteShiftModal() {
+      pendingDeleteShiftIdKey = null;
+      document.getElementById('deleteShiftModal').classList.add('hidden');
+    }
+
+    function confirmDeleteShiftRecord() {
+      if (!pendingDeleteShiftIdKey) return;
+      const cleanId = String(pendingDeleteShiftIdKey);
+      const confirmBtn = document.getElementById('btnConfirmDeleteShift');
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...`;
+      updateSyncStatusBadge('syncing', 'Menghapus shift...');
+
       db.ref('ugd_shifts/' + cleanId).remove()
-        .then(() => updateLastSyncStamp())
+        .then(() => {
+          closeDeleteShiftModal();
+          updateLastSyncStamp();
+          updateSyncStatusBadge('connected', 'Terhubung Cloud');
+        })
         .catch(() => {
           enqueueSyncOperation({ type: 'remove', path: 'ugd_shifts/' + cleanId });
+          closeDeleteShiftModal();
           updateSyncStatusBadge('offline', 'Antrean Hapus');
         });
     }
@@ -1694,6 +1958,7 @@
               <td class="py-3 px-3 text-center font-bold text-emerald-700">${refCount}</td>
               <td class="py-3 px-3 text-slate-600">${s.handoverNote || '-'}</td>
               <td class="py-3 px-3 text-center whitespace-nowrap">
+                <button type="button" onclick="openEditShiftModal('${safeKey}')" class="text-amber-600 hover:text-amber-800 mr-1.5 p-1.5 bg-amber-50 rounded-lg" title="Edit Shift"><i class="fa-solid fa-pen-to-square"></i></button>
                 <button type="button" onclick="deleteShiftRecord('${safeKey}')" class="text-rose-600 hover:text-rose-800 p-1.5 bg-rose-50 rounded-lg" title="Hapus Shift"><i class="fa-solid fa-trash"></i></button>
               </td>
             </tr>
@@ -3075,6 +3340,16 @@
 
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
+        const editShiftM = document.getElementById('editShiftModal');
+        if (editShiftM && !editShiftM.classList.contains('hidden')) {
+          closeEditShiftModal();
+          return;
+        }
+        const delShiftM = document.getElementById('deleteShiftModal');
+        if (delShiftM && !delShiftM.classList.contains('hidden')) {
+          closeDeleteShiftModal();
+          return;
+        }
         const editM = document.getElementById('editModal');
         if (editM && !editM.classList.contains('hidden')) {
           closeEditModal();
